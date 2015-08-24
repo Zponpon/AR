@@ -1,0 +1,89 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="原始程式檔">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="標頭檔">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="資源檔">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="原始程式檔\Matrix">
+      <UniqueIdentifier>{b952a077-06d4-44d1-b120-318ac552552c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="原始程式檔\Homography">
+      <UniqueIdentifier>{ddeca240-098f-4423-92cc-64b50a294ba2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="原始程式檔\MathLib">
+      <UniqueIdentifier>{bd8e6c20-a56a-418e-9fcc-b398f06fdc74}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="DebugFunc.cpp">
+      <Filter>原始程式檔</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp">
+      <Filter>原始程式檔</Filter>
+    </ClCompile>
+    <ClCompile Include="Video.cpp">
+      <Filter>原始程式檔</Filter>
+    </ClCompile>
+    <ClCompile Include="PoseEstimation.cpp">
+      <Filter>原始程式檔</Filter>
+    </ClCompile>
+    <ClCompile Include="Homography\Homography.cpp">
+      <Filter>原始程式檔\Homography</Filter>
+    </ClCompile>
+    <ClCompile Include="FeatureProcess.cpp">
+      <Filter>原始程式檔</Filter>
+    </ClCompile>
+    <ClCompile Include="SFMUtil.cpp">
+      <Filter>原始程式檔</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="debugfunc.h">
+      <Filter>標頭檔</Filter>
+    </ClInclude>
+    <ClInclude Include="PoseEstimation.h">
+      <Filter>標頭檔</Filter>
+    </ClInclude>
+    <ClInclude Include="Video.h">
+      <Filter>標頭檔</Filter>
+    </ClInclude>
+    <ClInclude Include="videoInput.h">
+      <Filter>標頭檔</Filter>
+    </ClInclude>
+    <ClInclude Include="Matrix\MyMatrix.h">
+      <Filter>原始程式檔\Matrix</Filter>
+    </ClInclude>
+    <ClInclude Include="Homography\Homography.h">
+      <Filter>原始程式檔\Homography</Filter>
+    </ClInclude>
+    <ClInclude Include="MathLib\MathLib.h">
+      <Filter>原始程式檔\MathLib</Filter>
+    </ClInclude>
+    <ClInclude Include="FeatureProcess.h">
+      <Filter>標頭檔</Filter>
+    </ClInclude>
+    <ClInclude Include="SFMUtil.h">
+      <Filter>標頭檔</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="videoInput.lib" />
+    <Library Include="levmar.lib" />
+    <Library Include="Matrix\Matrix.lib">
+      <Filter>原始程式檔\Matrix</Filter>
+    </Library>
+    <Library Include="MathLib\MathLib.lib">
+      <Filter>原始程式檔\MathLib</Filter>
+    </Library>
+    <Library Include="glut32.lib" />
+  </ItemGroup>
+</Project>
