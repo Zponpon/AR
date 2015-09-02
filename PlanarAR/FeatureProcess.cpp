@@ -51,6 +51,7 @@ void FindGoodMatches(FeatureMap &featureMap, Frame &frame, std::vector<cv::KeyPo
 			}
 		}
 	}
+	DebugOpenCVMatchPoint(featureMap.image, featureMap.keypoints, frame.image, frame.keypoints, goodMatches, "IMG1.JPG");
 	//把標記為true的點放入featureMap_goodMatches & frame_goodMatches
 	for (std::size_t i = 0; i < goodMatches.size(); i++)
 	{
@@ -298,7 +299,7 @@ void OpticalFlow(FeatureMap &featureMap, Frame &prevFrame, Frame &currFrame, std
 	cv::calcOpticalFlowPyrLK(prevFrame.image, currFrame.image, ReprojPts, tempPts, status, error);
 	for (int i = 0; i < tempPts.size(); ++i)
 	{
-		if (!(status[i] == 0 || error[i] > 30))
+		if (!(status[i] == 0 || error[i] > 5))
 		{
 			currPts.push_back(tempPts[i]);
 			good3DMatches.push_back(i);
@@ -314,30 +315,38 @@ void OpticalFlow(FeatureMap &featureMap, Frame &prevFrame, Frame &currFrame, std
 void OpticalFlow(cv::Mat prevFrame, cv::Mat &currFrame, std::vector<cv::Point2f> &prevFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapGoodMatches, std::vector<cv::Point2f> &featureMap_goodMatches, std::vector<cv::Point2f> &frame_goodMatches)
 {
 	//For PoseEsitmation by homography
+	int GoodSize = 0;
 	std::vector<cv::Point2f> GoodMatches[2]; //[0]->preFeatureMap, [1]->prevFrame, store the feature points
 	std::vector<uchar> status;	//record OpticalPyrLK keypoints which are right tracking
 	std::vector<float> error;	//record OpticalPyrLK error
 	std::vector<cv::Point2f> OpticalFlow_keypoints;
-
+	/*PyrLKOpticalFlow OpticalFlow();
+	GpuMat prevFrameGpu(prevFrame);
+	GpuMat currFrameGpu(currFrame);
+	GpuMat statusGpu;
+	OpticalFlow().sparse(prevFrameGpu, currFrameGpu, );*/
+	
 	// OpenCV function to find OpticalFlow points
 	cv::calcOpticalFlowPyrLK(prevFrame, currFrame, prevFrameGoodMatches, OpticalFlow_keypoints, status, error);
 
 	for (std::size_t i = 0; i < OpticalFlow_keypoints.size(); ++i)
 	{
 		//兩張圖error門檻值取大於30都不錯
-		if (!(status[i] == 0 || error[i] > 30))	//目前為經驗法則
+		//error似乎只是判斷有無值可以用(cv::norm(OpticalFlow_keypoints[i] - prevFeatureMapGoodMatches[i]) < 5))
+		if (!(status[i] == 0 || (cv::norm(OpticalFlow_keypoints[i] - prevFeatureMapGoodMatches[i]) < 5)))	//目前為經驗法則
 		{
 			GoodMatches[0].push_back(prevFeatureMapGoodMatches[i]);//避免拍到不是target image時，依舊保留上一個frame的特徵點
 			GoodMatches[1].push_back(prevFrameGoodMatches[i]);
 			featureMap_goodMatches.push_back(prevFeatureMapGoodMatches[i]);
 			frame_goodMatches.push_back(OpticalFlow_keypoints[i]);
+			GoodSize++;
 		}
 	}
 	prevFeatureMapGoodMatches.swap(GoodMatches[0]);
 	prevFrameGoodMatches.swap(GoodMatches[1]);
 
 	//因為他們的Size都會一樣，所以用prevFrameGoodMatches的Size表示就好
-//	std::cout << "OpticalFlow Size : " << GoodSize << std::endl;
+	std::cout << "OpticalFlow Size : " << GoodSize << std::endl;
 
 	//	free vector memory
 	std::vector<cv::Point2f>().swap(GoodMatches[0]);

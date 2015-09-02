@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include "SiftGPU.h"
+#include "KeyFrameSelection.h"
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/features2d/features2d.hpp"
@@ -11,6 +12,7 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/video/video.hpp"
+
 
 class FeatureMap
 {
@@ -59,7 +61,7 @@ public:
 void CreateFeatureMap(FeatureMap &featureMap, int minHessian);
 void Triangulation(Frame &frame1, Frame &frame2, FeatureMap &featureMap, double *cameraPara);
 //For homography
-bool EstimateCameraTransformation(Frame &keyFrame1, Frame &keyFrame2, unsigned char *inputprevFrame, unsigned char **inputFrame, int frameWidth, int frameHeight, FeatureMap &featureMap, double *cameraPara, double trans[3][4]);
+bool EstimateCameraTransformation(std::vector<Frame > &keyFrames, unsigned char *inputprevFrame, unsigned char **inputFrame, int frameWidth, int frameHeight, FeatureMap &featureMap, double *cameraPara, double trans[3][4]);
 //For Visual odometry
 bool EstimateCameraTransformation(FeatureMap &featureMap, Frame &prevImgTemp, Frame &previmg, unsigned char *inputFrame, int frameWidth, int frameHeight, double *cameraPara, double trans[3][4]);
 

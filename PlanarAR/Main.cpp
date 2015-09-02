@@ -5,6 +5,7 @@
 #include <AR/gsub.h>
 #include <ctime>
 #include "PoseEstimation.h"
+#include "KeyFrameSelection.h"
 #include "FeatureProcess.h"
 #include "DebugFunc.h"
 #include "Video.h"
@@ -35,7 +36,7 @@ clock_t t_start,t_end;
 //-----For triangulate
 Frame keyFrame1;		//k-2
 Frame keyFrame2;		//k-1
-
+std::vector<Frame > keyFrames(2);
 void InitOpenGL(void)
 {
 	glClearColor(1.0,1.0,1.0,0.0);
@@ -247,7 +248,7 @@ void display(void)
 	double trans[3][4];
 	double gl_para[16];
 
-	bool rtn = EstimateCameraTransformation(keyFrame1, keyFrame2, prevFrame, &frame, winWidth, winHeight, featureMap, camera_para, trans);
+	bool rtn = EstimateCameraTransformation(keyFrames, prevFrame, &frame, winWidth, winHeight, featureMap, camera_para, trans);
 
 	if (rtn == true)
 	{
@@ -271,7 +272,7 @@ void display(void)
 		//glutWireCube(50.0);
 		//glutSolidSphere(10.0,16,32);
 	}
-	else
+	/*else
 	{
 		if (keyFrame1.image.data && keyFrame2.image.data)
 		{
@@ -293,7 +294,7 @@ void display(void)
 				glutWireCube(100.0);
 			}
 		}
-	}
+	}*/
 	glutSwapBuffers();
 	FrameCount++;
 #ifndef DEBUG

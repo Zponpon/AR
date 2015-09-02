@@ -545,35 +545,6 @@ void Debug3D(Frame &image, char *name, double *cameraPara)
 	imshow(name, out);
 	imwrite(name, out);
 	waitKey(0);
-	/*cv::Mat K(3, 3, CV_64F), distCoeffs(5, 1, CV_64F);
-	//for (int i = 0; i < 9; ++i)
-	//	K.at<double>(i) = cameraPara[i];
-	K.at<double>(0) = 1.0; K.at<double>(3) = 1.0; K.at<double>(6) = 1.0;
-	K.at<double>(1) = K.at<double>(2) = K.at<double>(4) = K.at<double>(5) = K.at<double>(7) = K.at<double>(8) = 0.0;
-	std:vector<cv::Point3f> wOrigin(1);
-	std::vector <cv::Point2f> imgOrigin(1);
-	wOrigin[0].x = 400.0f; wOrigin[0].y = 300.0f; wOrigin[0].z = 0.0f;
-	cv::Mat R(3, 3, CV_64F), Rvec(3, 1, CV_64F), Tvec(3, 1, CV_64F);
-	image.projMatrix.col(0).copyTo(R.col(0));
-	image.projMatrix.col(1).copyTo(R.col(1));
-	image.projMatrix.col(2).copyTo(R.col(2));
-	image.projMatrix.col(3).copyTo(Tvec.col(0));
-	cv::Rodrigues(R, Rvec);
-	distCoeffs.at<double>(0) = -2.3330418751498366e-002;
-	distCoeffs.at<double>(1) = 4.1236192948405115e-001;
-	distCoeffs.at<double>(2) = 0.0000000;
-	distCoeffs.at<double>(3) = 0.0000000;
-	distCoeffs.at<double>(4) = -3.5676672532567948e+000;
-	cv::projectPoints(wOrigin, Rvec, Tvec, K, distCoeffs, imgOrigin);
-	cv::Mat out;
-	cv::KeyPoint point;
-	std::vector<cv::KeyPoint> points;
-	point.pt.x = imgOrigin[0].x; point.pt.y = imgOrigin[0].y;
-	points.push_back(point);
-	cout << imgOrigin[0] << endl;
-	cv::drawKeypoints(image.image, points, out, cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT);
-	imshow(name, out);
-	waitKey(0);*/
 }
 
 void CalculateProjectionMatrix(cv::Mat &projMatrix, const double trans[3][4], const double *cameraPara)
@@ -607,8 +578,8 @@ void CreateKeyFrame(Frame &currFrame, Frame &keyFrame, double *cameraPara, MyMat
 		keyFrame.release();
 	keyFrame = currFrame;
 	CalculateProjectionMatrix(keyFrame.projMatrix, trans, cameraPara);
-	cv::SurfDescriptorExtractor extractor;
-	extractor.compute(keyFrame.image, keyFrame.keypoints, keyFrame.descriptors);
+	//cv::SurfDescriptorExtractor extractor;
+	//extractor.compute(keyFrame.image, keyFrame.keypoints, keyFrame.descriptors);
 }
 
 void Triangulation(Frame &img1, Frame &img2, FeatureMap &featureMap, double *cameraPara)
@@ -699,10 +670,11 @@ void Triangulation(Frame &img1, Frame &img2, FeatureMap &featureMap, double *cam
 	std::vector<cv::Point2f> ().swap(img2_goodMatches);
 }
 
-bool EstimateCameraTransformation(Frame &keyFrame1, Frame &keyFrame2, unsigned char *inputPrevFrame, unsigned char **inputFrame, int frameWidth, int frameHeight, FeatureMap &featureMap, double *cameraPara, double trans[3][4])
+bool EstimateCameraTransformation(std::vector<Frame > &keyFrames, unsigned char *inputPrevFrame, unsigned char **inputFrame, int frameWidth, int frameHeight, FeatureMap &featureMap, double *cameraPara, double trans[3][4])
 {
 	//Homography
 	Frame currFrame, prevFrame;
+
 	currFrame.image = cv::Mat(frameHeight, frameWidth, CV_8UC3, *inputFrame);
 	if (inputPrevFrame != NULL)
 		prevFrame.image = cv::Mat(frameHeight, frameWidth, CV_8UC3, inputPrevFrame);
@@ -741,35 +713,33 @@ bool EstimateCameraTransformation(Frame &keyFrame1, Frame &keyFrame2, unsigned c
 	prevFeatureMapGoodMatches.swap(featureMap_goodMatches);
 	prevFrameGoodMatches.swap(frame_goodMatches);
 
-	if (keyFrame1.image.data)
+	/*if (!keyFrames.size())
 	{
-		if (keyFrame2.image.data)
+		if (keyFrames.size())
 		{
-			keyFrame1.release();
-			keyFrame1 = keyFrame2;
+			keyFrames[0].release();
+			keyFrames[0] = keyFrames[1];
 		}
-		CreateKeyFrame(currFrame, keyFrame2, cameraPara, H, trans);
+		CreateKeyFrame(currFrame, keyFrames[1], cameraPara, H, trans);
 		#ifdef SAVEIMAGE
 			DebugSaveImage("Img2.raw", keyFrame2.image.data, frameWidth, frameHeight, 3);
 			imshow("IMG2", keyFrame2.image);
 			waitKey(0);
 		#endif
-		Triangulation(keyFrame1, keyFrame2, featureMap, cameraPara);
+			Triangulation(keyFrames[0], keyFrames[1], featureMap, cameraPara);
 	}
 	else
 	{
-		CreateKeyFrame(currFrame, keyFrame1, cameraPara, H, trans);
+		CreateKeyFrame(currFrame, keyFrames[0], cameraPara, H, trans);
 		#ifdef SAVEIMAGE
 			DebugSaveImage("Img1.raw", keyFrame1.image.data, frameWidth, frameHeight, 3);
 			imshow("IMG1", keyFrame1.image);
 			waitKey(0);
 		#endif
-	}
-
+	}*/
 	std::vector<cv::KeyPoint>().swap(currFrame.keypoints);
 	std::vector<cv::Point2f> ().swap(featureMap_goodMatches);
 	std::vector<cv::Point2f> ().swap(frame_goodMatches);
-
 	return true;
 }
  
