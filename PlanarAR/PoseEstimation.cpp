@@ -399,7 +399,7 @@ void RefineCameraPose(Point2d *pPoints1, Point2d *pPoints2, int nPoints, double 
 	//printf("%f %f %f\n",t.x,t.y,t.z);
 }
 
-void RefineCameraPose(std::vector<cv::Point2d> pPoints1, std::vector<cv::Point2d> pPoints2, int nPoints, double fx, double fy, double s, double ux, double uy, MyMatrix &R, Vector3d &t)
+void RefineCameraPose(std::vector<cv::Point2f> pPoints1, std::vector<cv::Point2f> pPoints2, int nPoints, double fx, double fy, double s, double ux, double uy, MyMatrix &R, Vector3d &t)
 {
 	double par[7]; // initial parameters par[0]: rotation angle, par[1]-par[3]:rotation axis par[4]-par[6]: translation vector
 	double *pdMeasurements; // Measurements data
@@ -547,7 +547,7 @@ void Debug3D(Frame &image, char *name, double *cameraPara)
 	waitKey(0);
 }
 
-void CalculateProjectionMatrix(cv::Mat &projMatrix, const double trans[3][4], const double *cameraPara)
+void calcProjectionMatrix(cv::Mat &projMatrix, const double trans[3][4], const double *cameraPara)
 {
 	//Calculate the projection matrix which projects the points from the world coordinate to image coordinate
 	if (projMatrix.rows == 0 || projMatrix.cols == 0)
@@ -570,20 +570,23 @@ void CalculateProjectionMatrix(cv::Mat &projMatrix, const double trans[3][4], co
 	Rt.at<double>(10) =  trans[2][2];
 	Rt.at<double>(11) =  trans[2][3];
 
-	projMatrix = K*Rt;
+	projMatrix = Rt;/*In triangulation process, we need to multiple K*/
 }
-void CreateKeyFrame(Frame &currFrame, Frame &keyFrame, double *cameraPara, MyMatrix &H, double trans[3][4])
+void CreateKeyFrame(Frame &currFrame, Frame &keyFrame, double *cameraPara, double trans[3][4])
 {
 	if (keyFrame.image.data)
 		keyFrame.release();
 	keyFrame = currFrame;
-	CalculateProjectionMatrix(keyFrame.projMatrix, trans, cameraPara);
+	calcProjectionMatrix(keyFrame.projMatrix, trans, cameraPara);
 	//cv::SurfDescriptorExtractor extractor;
 	//extractor.compute(keyFrame.image, keyFrame.keypoints, keyFrame.descriptors);
 }
 
 void Triangulation(Frame &img1, Frame &img2, FeatureMap &featureMap, double *cameraPara)
 {
+	MyMatrix K;
+	for (int i = 0; i < 9; ++i)
+		K.m_lpdEntries[i] = cameraPara[i];
 	//Feature detection and matching
 	std::vector<cv::DMatch> matches;
 	std::vector<cv::Point2f> img1_goodMatches, img2_goodMatches;
@@ -610,14 +613,13 @@ void Triangulation(Frame &img1, Frame &img2, FeatureMap &featureMap, double *cam
 	}
 
 	//Triangulate the points
-	//if (featureMap.feature3D.size() != 0) std::vector<cv::Point3f>().swap(featureMap.feature3D);
 	vector<int> good3DPointsIndex;
 	std::vector<cv::Point3f> feature3D;
 
 	for (std::size_t i = 0; i < img1_goodMatches.size(); ++i)
 	{
 		cv::Point3f pt;
-		if (Find3DCoordinates(Matrix1, Matrix2, img1_goodMatches[i], img2_goodMatches[i], pt))
+		if (Find3DCoordinates(K, Matrix1, Matrix2, img1_goodMatches[i], img2_goodMatches[i], pt))
 		{
 			feature3D.push_back(pt);
 			good3DPointsIndex.push_back(i);
@@ -683,16 +685,28 @@ bool EstimateCameraTransformation(std::vector<Frame > &keyFrames, unsigned char 
 		return false;
 
 	MyMatrix H(3, 3);
-	cv::Mat Homo(cv::findHomography(featureMap_goodMatches, frame_goodMatches, CV_RANSAC));
+	//cv::Mat mask;
+	cv::Mat mask;
+	cv::Mat Homo(cv::findHomography(featureMap_goodMatches, frame_goodMatches, CV_RANSAC, 3.0, mask));
 
 	for (int i = 0; i < 9; ++i)
 		H.m_lpdEntries[i] = Homo.at<double>(i);
+	
+	std::vector<cv::Point2f> featureMapInliners, frameInliners;
+	for (int i = 0; i < mask.rows; ++i)
+	{
+		if (mask.at<uchar>(i))
+		{
+			featureMapInliners.push_back(featureMap_goodMatches[i]);
+			frameInliners.push_back(frame_goodMatches[i]);
+		}
+	}
 
 	MyMatrix R(3, 3);
 	Vector3d t;
 	
 	EstimateCameraPoseFromHomography(H, cameraPara[0], cameraPara[4], cameraPara[1], cameraPara[2], cameraPara[5], R, t);
-	//RefineCameraPose(featureMap_goodMatches, frame_goodMatches, good_matches.size(), cameraPara[0], cameraPara[4], cameraPara[1], cameraPara[2], cameraPara[5], R, t);
+	RefineCameraPose(featureMapInliners, frameInliners, frameInliners.size(), cameraPara[0], cameraPara[4], cameraPara[1], cameraPara[2], cameraPara[5], R, t);
 	//RefineCameraPose(pPoints1, pPoints2, nInliers, cameraPara[0], cameraPara[4], cameraPara[1], cameraPara[2], cameraPara[5], R, t);
 
 	trans[0][0] = R.m_lpdEntries[0];
@@ -710,36 +724,26 @@ bool EstimateCameraTransformation(std::vector<Frame > &keyFrames, unsigned char 
 
 	//	把影像中好的特徵點放入prevFeatureMapGoodMatches  給OpticalFlow計算用
 	//	把場景中好的特徵點放入preScene_goodmatches 給OpticalFlow計算用
-	prevFeatureMapGoodMatches.swap(featureMap_goodMatches);
-	prevFrameGoodMatches.swap(frame_goodMatches);
-
-	/*if (!keyFrames.size())
+	prevFeatureMapGoodMatches.swap(featureMapInliners);
+	prevFrameGoodMatches.swap(frameInliners);
+	MyMatrix K;
+	//for (int i = 0; i < 9; ++i)
+//		K.m_lpdEntries[i] = cameraPara[i];
+	if (!keyFrames.size())
 	{
-		if (keyFrames.size())
-		{
-			keyFrames[0].release();
-			keyFrames[0] = keyFrames[1];
-		}
-		CreateKeyFrame(currFrame, keyFrames[1], cameraPara, H, trans);
-		#ifdef SAVEIMAGE
-			DebugSaveImage("Img2.raw", keyFrame2.image.data, frameWidth, frameHeight, 3);
-			imshow("IMG2", keyFrame2.image);
-			waitKey(0);
-		#endif
-			Triangulation(keyFrames[0], keyFrames[1], featureMap, cameraPara);
+		//Reference keyframe
+		Frame keyFrame;
+		CreateKeyFrame(currFrame, keyFrame, cameraPara, trans);
+		keyFrames.push_back(keyFrame);
 	}
-	else
-	{
-		CreateKeyFrame(currFrame, keyFrames[0], cameraPara, H, trans);
-		#ifdef SAVEIMAGE
-			DebugSaveImage("Img1.raw", keyFrame1.image.data, frameWidth, frameHeight, 3);
-			imshow("IMG1", keyFrame1.image);
-			waitKey(0);
-		#endif
-	}*/
+	//else
+	//	KeyFrameSelection(keyFrames);
+
 	std::vector<cv::KeyPoint>().swap(currFrame.keypoints);
 	std::vector<cv::Point2f> ().swap(featureMap_goodMatches);
 	std::vector<cv::Point2f> ().swap(frame_goodMatches);
+	std::vector<cv::Point2f>().swap(featureMapInliners);
+	std::vector<cv::Point2f>().swap(featureMapInliners);
 	return true;
 }
  
@@ -833,7 +837,7 @@ bool EstimateCameraTransformation(FeatureMap &featureMap, Frame &prevFrameTemp, 
 	cout << "T : " << T << endl;
 	cout << "Rotation Matrix : " << Rm << endl;
 	cout << "Translation Vector : " << tvec << endl;
-	CalculateProjectionMatrix(currFrame.projMatrix, trans, cameraPara);
+	calcProjectionMatrix(currFrame.projMatrix, trans, cameraPara);
 	Debug3D(currFrame, "VO.JPG", cameraPara);
 	prevFrameTemp.release();
 	prevFrameTemp = prevFrame;

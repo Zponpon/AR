@@ -4,7 +4,7 @@
 #include <iostream>
 #include <vector>
 #include "SiftGPU.h"
-#include "KeyFrameSelection.h"
+#include "Frame.h"
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/features2d/features2d.hpp"
@@ -28,7 +28,7 @@ public:
 	/*feature3D record the features in the world coordinate are not on the marker*/																		
 };	/*****************************************************************************/						
 						
-class Frame
+/*class Frame
 {
 public:
 	void release()
@@ -42,7 +42,7 @@ public:
 	}
 	Frame& operator= (Frame &frame)
 	{
-		image = frame.image;
+		frame.image.copyTo(image);
 		keypoints = frame.keypoints;
 		frame.descriptors.copyTo(descriptors);
 		keypoints_3D = frame.keypoints_3D;
@@ -56,7 +56,7 @@ public:
 	std::vector<cv::KeyPoint> keypoints_3D; //3D feature's keypoint(2D) in the image
 	cv::Mat descriptors_3D; //Record the 3D points descriptors in the 2D image
 	cv::Mat projMatrix;//The projection matrix is from world coordinate to image coordinate
-};
+};*/
 
 void CreateFeatureMap(FeatureMap &featureMap, int minHessian);
 void Triangulation(Frame &frame1, Frame &frame2, FeatureMap &featureMap, double *cameraPara);

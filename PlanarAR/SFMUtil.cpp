@@ -100,7 +100,7 @@ bool Find3DCoordinates(const std::vector<MyMatrix> &Ps, const std::vector<Point3
 /*  Inpput: Ps: projection matrixs, pts: image correspondences in ordinary coordinates
 /*  Output: rPt: reconstructed 3D point
 /***************************************************************************************************************/
-bool Find3DCoordinates(std::vector<MyMatrix> &Ps, const std::vector<cv::Point2f> &pts, cv::Point3f &r3DPt)
+bool Find3DCoordinates(MyMatrix &K, std::vector<MyMatrix> &Ps, const std::vector<cv::Point2f> &pts, cv::Point3f &r3DPt)
 {
 	int nViews;
 
@@ -198,11 +198,12 @@ bool Find3DCoordinates(MyMatrix &K, std::vector<MyMatrix> &Rs, std::vector<MyMat
 /*  Inpput: Ps: projection matrixs, pts: image correspondences in ordinary coordinates
 /*  Output: rPt: reconstructed 3D point
 /***************************************************************************************************************/
-bool Find3DCoordinates(MyMatrix &P1, MyMatrix &P2, const cv::Point2f &pt1, const cv::Point2f &pt2, cv::Point3f &r3DPt)
+bool Find3DCoordinates(MyMatrix &K, MyMatrix &P1, MyMatrix &P2, const cv::Point2f &pt1, const cv::Point2f &pt2, cv::Point3f &r3DPt)
 {
 	MyMatrix *A, *U, *D, *V;
 	A = new MyMatrix(4, 4);
-
+	P1 = K*P1;
+	P2 = K*P2;
 	A->m_lpdEntries[0] = pt1.x*P1.m_lpdEntries[8] - P1.m_lpdEntries[0];
 	A->m_lpdEntries[1] = pt1.x*P1.m_lpdEntries[9] - P1.m_lpdEntries[1];
 	A->m_lpdEntries[2] = pt1.x*P1.m_lpdEntries[10] - P1.m_lpdEntries[2];

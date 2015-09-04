@@ -22,8 +22,8 @@ using cv::waitKey;
 using cv::imwrite;
 
 void CreateFrame(Frame &frame, unsigned int minHessian);
-void SurfDetection(cv::Mat data, std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors, unsigned int minHessian);
-void FlannMatching(cv::Mat descriptors_img, cv::Mat descriptors_scene, std::vector<cv::DMatch> &matches);
+void SurfDetection(cv::Mat &data, std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors, unsigned int minHessian);
+void FlannMatching(cv::Mat &descriptors_img, cv::Mat &descriptors_scene, std::vector<cv::DMatch> &matches);
 void OpticalFlow(cv::Mat preFrame, cv::Mat &curFrame, std::vector<cv::Point2f> &preFrameGoodMatches, std::vector<cv::Point2f> &preImageGoodMatches, std::vector<cv::Point2f> &img_goodmatches, std::vector<cv::Point2f> &scene_goodmatches);
 void OpticalFlow(FeatureMap &featureMap, Frame &prevFrame, Frame &currFrame, std::vector<cv::Point2f> &currPts, std::vector<int> &good3DMatches);
 void DeleteOverlap(std::vector<cv::Point2f> &img_goodmatches, std::vector<cv::Point2f> &scene_goodmatches);

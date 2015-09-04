@@ -17,8 +17,8 @@ void DebugMarkPoint(unsigned char* Data, int Width, int Height, vector<SiftGPU::
 void DebugMarkMatchedPoint(unsigned char* imgData, int Width, int Height, int nMatched,  int (*match_buf)[2], int ImageIndex, vector<cv::KeyPoint> keys);
 void DebugSaveCorrespondences(char *filename, vector<SiftGPU::SiftKeypoint> &keys1, vector<SiftGPU::SiftKeypoint> &keys2, int match_buf[][2], int num_match);
 
-void DebugOpenCVMarkPoint(cv::Mat data, std::vector<cv::KeyPoint> keypoints, char *name);
-void DebugOpenCVMatchPoint(cv::Mat image, std::vector<cv::KeyPoint> keypoints_img, cv::Mat scene, std::vector<cv::KeyPoint>keypoints_scene, std::vector<cv::DMatch>good_matches, char *name);
+void DebugOpenCVMarkPoint(cv::Mat &data, std::vector<cv::KeyPoint> &keypoints, char *name);
+void DebugOpenCVMatchPoint(cv::Mat &image, std::vector<cv::KeyPoint> &keypoints_img, cv::Mat &scene, std::vector<cv::KeyPoint> &keypoints_scene, std::vector<cv::DMatch> &good_matches, char *name);
 
 void DebugSaveImage(char *filename, unsigned char *pbImage, int iWidth, int iHeight, int nChannel);
 void DebugLoadImage(char *filename, unsigned char *pbImage, int iWidth, int iHeight, int nChannel);

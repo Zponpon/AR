@@ -141,7 +141,7 @@ void DebugSaveCorrespondences(char *filename, vector<SiftGPU::SiftKeypoint> &key
 	fclose(fp);
 }
 
-void DebugOpenCVMarkPoint(cv::Mat data, std::vector<cv::KeyPoint> keypoints, char *name)
+void DebugOpenCVMarkPoint(cv::Mat &data, std::vector<cv::KeyPoint> &keypoints, char *name)
 {
 	cv::Mat keypointsinimage;
 	cv::drawKeypoints(data, keypoints, keypointsinimage, cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT);
@@ -150,7 +150,7 @@ void DebugOpenCVMarkPoint(cv::Mat data, std::vector<cv::KeyPoint> keypoints, cha
 	cv::waitKey(0);
 }
 
-void DebugOpenCVMatchPoint(cv::Mat image, std::vector<cv::KeyPoint> keypoints_img, cv::Mat scene, std::vector<cv::KeyPoint>keypoints_scene, std::vector<cv::DMatch>good_matches, char *name)
+void DebugOpenCVMatchPoint(cv::Mat &image, std::vector<cv::KeyPoint> &keypoints_img, cv::Mat &scene, std::vector<cv::KeyPoint> &keypoints_scene, std::vector<cv::DMatch> &good_matches, char *name)
 {
 	cv::Mat matches;
 	cv::drawMatches(image, keypoints_img, scene, keypoints_scene,
@@ -191,32 +191,4 @@ void WriteVideo()
 		delete[]c;
 	}
 
-}
-
-void WriteRecordFile(unsigned long FrameCount, int GoodMatchesSize, int OpticalFlowKeyPointsSize)
-{
-	//std::ios::clear;
-	std::fstream file;
-	int GoodKeyPointsSize = GoodMatchesSize + OpticalFlowKeyPointsSize;
-	if (GoodKeyPointsSize >= 30)
-	{
-		file.open("GoodMatchesSize.txt", std::ios::out | std::ios::app);
-		file << "(FrameCount, GoodMatchesSize, OpticalFlowKeyPointsSize, GoodMatchesSize + OpticalFlowKeyPointsSize) : (" 
-			 << FrameCount << ", " 
-			 << (int)GoodMatchesSize << ", " 
-			 << (int)OpticalFlowKeyPointsSize << ", "
-			 << GoodKeyPointsSize
-			 << ")\n";
-	}
-	else
-	{
-		file.open("GoodMatchesSize.txt", std::ios::out | std::ios::app);
-		file << "NOTENOUGH (FrameCount, GoodMatchesSize, OpticalFlowKeyPointsSize, GoodMatchesSize + OpticalFlowKeyPointsSize) : ("
-			 << FrameCount << ", " 
-			 << (int)GoodMatchesSize << ", "
-			 << (int)OpticalFlowKeyPointsSize << ", "
-			 << GoodKeyPointsSize
-			 << ")\n";
-	}
-	file.close();
 }

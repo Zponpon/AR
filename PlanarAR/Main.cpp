@@ -5,7 +5,7 @@
 #include <AR/gsub.h>
 #include <ctime>
 #include "PoseEstimation.h"
-#include "KeyFrameSelection.h"
+#include "Frame.h"
 #include "FeatureProcess.h"
 #include "DebugFunc.h"
 #include "Video.h"
@@ -36,7 +36,7 @@ clock_t t_start,t_end;
 //-----For triangulate
 Frame keyFrame1;		//k-2
 Frame keyFrame2;		//k-1
-std::vector<Frame > keyFrames(2);
+std::vector<Frame > keyFrames;
 void InitOpenGL(void)
 {
 	glClearColor(1.0,1.0,1.0,0.0);

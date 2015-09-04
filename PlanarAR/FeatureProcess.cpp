@@ -51,7 +51,7 @@ void FindGoodMatches(FeatureMap &featureMap, Frame &frame, std::vector<cv::KeyPo
 			}
 		}
 	}
-	DebugOpenCVMatchPoint(featureMap.image, featureMap.keypoints, frame.image, frame.keypoints, goodMatches, "IMG1.JPG");
+	//DebugOpenCVMatchPoint(featureMap.image, featureMap.keypoints, frame.image, frame.keypoints, goodMatches, "IMG1.JPG");
 	//把標記為true的點放入featureMap_goodMatches & frame_goodMatches
 	for (std::size_t i = 0; i < goodMatches.size(); i++)
 	{
@@ -256,7 +256,7 @@ void DeleteOverlap(std::vector<cv::Point2f> &featureMap_goodMatches, std::vector
 	std::vector<bool>().swap(NotOverlayPointsFlag);
 }
 
-void SurfDetection(cv::Mat data, std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors, unsigned int minHessian)
+void SurfDetection(cv::Mat &data, std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors, unsigned int minHessian)
 {
 	int win = glutGetWindow();
 	cv::SurfFeatureDetector *detector = new cv::SurfFeatureDetector(minHessian);
@@ -273,7 +273,7 @@ void SurfDetection(cv::Mat data, std::vector<cv::KeyPoint> &keypoints, cv::Mat &
 	glutSetWindow(win);
 }
 
-void FlannMatching(cv::Mat descriptors_featureMap, cv::Mat descriptors_frame, std::vector<cv::DMatch> &matches)
+void FlannMatching(cv::Mat &descriptors_featureMap, cv::Mat &descriptors_frame, std::vector<cv::DMatch> &matches)
 {
 	int win = glutGetWindow();
 	cv::FlannBasedMatcher *matcher = new cv::FlannBasedMatcher();
@@ -320,11 +320,6 @@ void OpticalFlow(cv::Mat prevFrame, cv::Mat &currFrame, std::vector<cv::Point2f>
 	std::vector<uchar> status;	//record OpticalPyrLK keypoints which are right tracking
 	std::vector<float> error;	//record OpticalPyrLK error
 	std::vector<cv::Point2f> OpticalFlow_keypoints;
-	/*PyrLKOpticalFlow OpticalFlow();
-	GpuMat prevFrameGpu(prevFrame);
-	GpuMat currFrameGpu(currFrame);
-	GpuMat statusGpu;
-	OpticalFlow().sparse(prevFrameGpu, currFrameGpu, );*/
 	
 	// OpenCV function to find OpticalFlow points
 	cv::calcOpticalFlowPyrLK(prevFrame, currFrame, prevFrameGoodMatches, OpticalFlow_keypoints, status, error);
@@ -363,25 +358,17 @@ bool FeatureDetectionAndMatching(FeatureMap &featureMap, Frame &prevFrame, Frame
 	if (currFrame.keypoints.size() == 0) return false;
 	std::vector<cv::DMatch> matches;
 	FlannMatching(featureMap.descriptors, currFrame.descriptors, matches);
-	if (matches.size() < 30)
-	{
-		std::cout << "matches.size : " << matches.size() << std::endl;
-		std::vector<cv::DMatch>  ().swap(matches);
-		std::vector<cv::KeyPoint>().swap(currFrame.keypoints);
-		return false;
-	}
 	FindGoodMatches(featureMap, currFrame, currFrame.keypoints, matches, featureMap_goodMatches, frame_goodMatches);
 	std::cout << "Surf Good Matches Size : " << frame_goodMatches.size() << std::endl;
 
 	bool usingOpticalFlow = false;
-	if ((int)frame_goodMatches.size() < 5)
+	/*if ((int)frame_goodMatches.size() < 5)
 	{
 		prevFeatureMapGoodMatches.swap(featureMap_goodMatches);
 		prevFrameGoodMatches.swap(frame_goodMatches);
-
 		return false;
-	}
-	else if ((int)frame_goodMatches.size() < 25)
+	}*/
+	if ((int)frame_goodMatches.size() < 25)
 	{
 		if (prevFrameGoodMatches.size() != 0 && prevFeatureMapGoodMatches.size() != 0 && prevFrame.image.data != NULL)
 		{

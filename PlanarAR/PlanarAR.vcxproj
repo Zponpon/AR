@@ -131,7 +131,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalOptions>/NODEFAULTLIB:"atlthunk"</AdditionalOptions>
       <AdditionalLibraryDirectories>S:\OpenCV2.4.10\opencv\build\x86\vc12\lib;S:\AR\SiftGPU\lib;S:\AR\ARToolKit\lib;C:\Users\godtone\Desktop\AR\SiftGPU\lib;C:\opencv\build\x86\vc12\lib;C:\Users\godtone\Desktop\AR\ARToolKit\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opencv_features2d2410.lib;opencv_calib3d2410.lib;opencv_core2410.lib;opencv_highgui2410.lib;opencv_flann2410.lib;opencv_nonfree2410.lib;opencv_video2410.lib;opencv_imgproc2410.lib;SIFTGPU.lib;libAR.lib;libARgsub.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opencv_features2d2410.lib;opencv_calib3d2410.lib;opencv_core2410.lib;opencv_highgui2410.lib;opencv_flann2410.lib;opencv_nonfree2410.lib;opencv_video2410.lib;opencv_imgproc2410.lib;opencv_stitching2410.lib;SIFTGPU.lib;libAR.lib;libARgsub.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -159,7 +159,7 @@
     <ClCompile Include="DebugFunc.cpp" />
     <ClCompile Include="FeatureProcess.cpp" />
     <ClCompile Include="Homography\Homography.cpp" />
-    <ClCompile Include="KeyFrameSelection.cpp" />
+    <ClCompile Include="Frame.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="PoseEstimation.cpp" />
     <ClCompile Include="SFMUtil.cpp" />
@@ -169,7 +169,7 @@
     <ClInclude Include="debugfunc.h" />
     <ClInclude Include="FeatureProcess.h" />
     <ClInclude Include="Homography\Homography.h" />
-    <ClInclude Include="KeyFrameSelection.h" />
+    <ClInclude Include="Frame.h" />
     <ClInclude Include="MathLib\MathLib.h" />
     <ClInclude Include="Matrix\MyMatrix.h" />
     <ClInclude Include="PoseEstimation.h" />

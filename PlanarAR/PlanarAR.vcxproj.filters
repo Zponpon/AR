@@ -45,7 +45,7 @@
     <ClCompile Include="SFMUtil.cpp">
       <Filter>原始程式檔</Filter>
     </ClCompile>
-    <ClCompile Include="KeyFrameSelection.cpp">
+    <ClCompile Include="Frame.cpp">
       <Filter>原始程式檔</Filter>
     </ClCompile>
   </ItemGroup>
@@ -77,7 +77,7 @@
     <ClInclude Include="SFMUtil.h">
       <Filter>標頭檔</Filter>
     </ClInclude>
-    <ClInclude Include="KeyFrameSelection.h">
+    <ClInclude Include="Frame.h">
       <Filter>標頭檔</Filter>
     </ClInclude>
   </ItemGroup>
