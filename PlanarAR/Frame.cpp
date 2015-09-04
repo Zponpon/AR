@@ -1,8 +1,8 @@
 #include "Frame.h"
 
-void KeyFrameSelection(std::vector<Frame> &keyFrames)
+bool KeyFrameSelection(unsigned long index, std::vector<KeyFrame> &keyFrames)
 {
-	std::vector<cv::KeyPoint> landmarkSet;
-	//cv::detail::BundleAdjusterBase::operator(
-	
+	if (index - keyFrames[0].index < 20)
+		return false;
+	return true;
 }

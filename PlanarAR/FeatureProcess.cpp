@@ -328,7 +328,8 @@ void OpticalFlow(cv::Mat prevFrame, cv::Mat &currFrame, std::vector<cv::Point2f>
 	{
 		//兩張圖error門檻值取大於30都不錯
 		//error似乎只是判斷有無值可以用(cv::norm(OpticalFlow_keypoints[i] - prevFeatureMapGoodMatches[i]) < 5))
-		if (!(status[i] == 0 || (cv::norm(OpticalFlow_keypoints[i] - prevFeatureMapGoodMatches[i]) < 5)))	//目前為經驗法則
+		//根據這部分code來設定threshold https://github.com/Itseez/opencv/blob/master/samples/cpp/lkdemo.cpp/
+		if (!(status[i] == 0 || (cv::norm(OpticalFlow_keypoints[i] - prevFeatureMapGoodMatches[i]) <= 5)))	//目前為經驗法則
 		{
 			GoodMatches[0].push_back(prevFeatureMapGoodMatches[i]);//避免拍到不是target image時，依舊保留上一個frame的特徵點
 			GoodMatches[1].push_back(prevFrameGoodMatches[i]);
@@ -339,11 +340,8 @@ void OpticalFlow(cv::Mat prevFrame, cv::Mat &currFrame, std::vector<cv::Point2f>
 	}
 	prevFeatureMapGoodMatches.swap(GoodMatches[0]);
 	prevFrameGoodMatches.swap(GoodMatches[1]);
-
-	//因為他們的Size都會一樣，所以用prevFrameGoodMatches的Size表示就好
 	std::cout << "OpticalFlow Size : " << GoodSize << std::endl;
 
-	//	free vector memory
 	std::vector<cv::Point2f>().swap(GoodMatches[0]);
 	std::vector<cv::Point2f>().swap(GoodMatches[1]);
 	std::vector<cv::Point2f>().swap(OpticalFlow_keypoints);
@@ -351,15 +349,15 @@ void OpticalFlow(cv::Mat prevFrame, cv::Mat &currFrame, std::vector<cv::Point2f>
 	std::vector<float>().swap(error);
 }
 
-bool FeatureDetectionAndMatching(FeatureMap &featureMap, Frame &prevFrame, Frame &currFrame, unsigned int minHessian, std::vector<cv::Point2f>  &featureMap_goodMatches, std::vector<cv::Point2f> &frame_goodMatches, std::vector<cv::Point2f> &prevFeatureMapGoodMatches, std::vector<cv::Point2f> &prevFrameGoodMatches)
+bool FeatureDetectionAndMatching(FeatureMap &featureMap, Frame &prevFrame, Frame &currFrame, unsigned int minHessian, std::vector<cv::Point2f>  &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapGoodMatches, std::vector<cv::Point2f> &prevFrameGoodMatches)
 {
 	//For homography pose estimation
 	SurfDetection(currFrame.image, currFrame.keypoints, currFrame.descriptors, minHessian);
 	if (currFrame.keypoints.size() == 0) return false;
 	std::vector<cv::DMatch> matches;
 	FlannMatching(featureMap.descriptors, currFrame.descriptors, matches);
-	FindGoodMatches(featureMap, currFrame, currFrame.keypoints, matches, featureMap_goodMatches, frame_goodMatches);
-	std::cout << "Surf Good Matches Size : " << frame_goodMatches.size() << std::endl;
+	FindGoodMatches(featureMap, currFrame, currFrame.keypoints, matches, featureMapGoodMatches, frameGoodMatches);
+	std::cout << "Surf Good Matches Size : " << frameGoodMatches.size() << std::endl;
 
 	bool usingOpticalFlow = false;
 	/*if ((int)frame_goodMatches.size() < 5)
@@ -368,22 +366,22 @@ bool FeatureDetectionAndMatching(FeatureMap &featureMap, Frame &prevFrame, Frame
 		prevFrameGoodMatches.swap(frame_goodMatches);
 		return false;
 	}*/
-	if ((int)frame_goodMatches.size() < 25)
+	if ((int)frameGoodMatches.size() < 25)
 	{
 		if (prevFrameGoodMatches.size() != 0 && prevFeatureMapGoodMatches.size() != 0 && prevFrame.image.data != NULL)
 		{
-			OpticalFlow(prevFrame.image, currFrame.image, prevFrameGoodMatches, prevFeatureMapGoodMatches, featureMap_goodMatches, frame_goodMatches);
+			OpticalFlow(prevFrame.image, currFrame.image, prevFrameGoodMatches, prevFeatureMapGoodMatches, featureMapGoodMatches, frameGoodMatches);
 			usingOpticalFlow = true;	//Surf偵測的特徵點不足
 		}
 		else
 		{
-			prevFeatureMapGoodMatches.swap(featureMap_goodMatches);
-			prevFrameGoodMatches.swap(frame_goodMatches);
+			prevFeatureMapGoodMatches.swap(featureMapGoodMatches);
+			prevFrameGoodMatches.swap(frameGoodMatches);
 
 			std::vector<cv::DMatch>().swap(matches);
 			std::vector<cv::KeyPoint>().swap(currFrame.keypoints);
-			std::vector<cv::Point2f>().swap(featureMap_goodMatches);
-			std::vector<cv::Point2f>().swap(frame_goodMatches);
+			std::vector<cv::Point2f>().swap(featureMapGoodMatches);
+			std::vector<cv::Point2f>().swap(frameGoodMatches);
 
 			return false;
 		}
@@ -391,19 +389,18 @@ bool FeatureDetectionAndMatching(FeatureMap &featureMap, Frame &prevFrame, Frame
 
 	if (usingOpticalFlow)
 	{
-		DeleteOverlap(featureMap_goodMatches, frame_goodMatches);
-		std::cout << "Surf + OpticalFlow Good Matches Size : " << frame_goodMatches.size() << std::endl;
-		if ((int)frame_goodMatches.size() < 30)
+		DeleteOverlap(featureMapGoodMatches, frameGoodMatches);
+		std::cout << "Surf + OpticalFlow Good Matches Size : " << frameGoodMatches.size() << std::endl;
+		if ((int)frameGoodMatches.size() < 30)
 		{
 			std::vector<cv::DMatch>().swap(matches);
 			std::vector<cv::KeyPoint>().swap(currFrame.keypoints);
-			std::vector<cv::Point2f>().swap(featureMap_goodMatches);
-			std::vector<cv::Point2f>().swap(frame_goodMatches);
-
+			std::vector<cv::Point2f>().swap(featureMapGoodMatches);
+			std::vector<cv::Point2f>().swap(frameGoodMatches);
 			return false;
 		}
 	}
-	std::vector<cv::DMatch>().swap(matches);
 
+	std::vector<cv::DMatch>().swap(matches);
 	return true;
 }

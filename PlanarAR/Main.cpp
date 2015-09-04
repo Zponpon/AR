@@ -33,10 +33,8 @@ cv::VideoWriter writer("GoProTestVideo.avi", CV_FOURCC('M', 'J', 'P', 'G'), 10.0
 
 clock_t t_start,t_end;
 
-//-----For triangulate
-Frame keyFrame1;		//k-2
-Frame keyFrame2;		//k-1
-std::vector<Frame > keyFrames;
+std::vector<KeyFrame> keyFrames;
+
 void InitOpenGL(void)
 {
 	glClearColor(1.0,1.0,1.0,0.0);
@@ -248,7 +246,7 @@ void display(void)
 	double trans[3][4];
 	double gl_para[16];
 
-	bool rtn = EstimateCameraTransformation(keyFrames, prevFrame, &frame, winWidth, winHeight, featureMap, camera_para, trans);
+	bool rtn = EstimateCameraTransformation(FrameCount, keyFrames, prevFrame, &frame, winWidth, winHeight, featureMap, camera_para, trans);
 
 	if (rtn == true)
 	{

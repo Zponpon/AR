@@ -13,8 +13,8 @@
 #include "levmar.h"
 #include "debugfunc.h"
 
-std::vector<cv::Point2f> prevFrameGoodMatches; //Point2f vector good keypoints in previous frame
-std::vector<cv::Point2f> prevFeatureMapGoodMatches; //Point2f vector good keypoints in image
+std::vector<cv::Point2f> prevFrameInliners; //Point2f vector good keypoints in previous frame
+std::vector<cv::Point2f> prevFeatureMapInliners; //Point2f vector good keypoints in image
 
 /*********************************************************************************************************/
 /* Given rotation axis and rotation angle, find the corresponding rotation matrix                        */
@@ -572,14 +572,15 @@ void calcProjectionMatrix(cv::Mat &projMatrix, const double trans[3][4], const d
 
 	projMatrix = Rt;/*In triangulation process, we need to multiple K*/
 }
-void CreateKeyFrame(Frame &currFrame, Frame &keyFrame, double *cameraPara, double trans[3][4])
+void CreateKeyFrame(unsigned long index, Frame &currFrame, KeyFrame &keyFrame, double *cameraPara, double trans[3][4])
 {
-	if (keyFrame.image.data)
-		keyFrame.release();
-	keyFrame = currFrame;
+	currFrame.image.copyTo(keyFrame.image);
+	keyFrame.feature.swap(currFrame.keypoints);
+	currFrame.descriptors.copyTo(keyFrame.descriptors);
 	calcProjectionMatrix(keyFrame.projMatrix, trans, cameraPara);
-	//cv::SurfDescriptorExtractor extractor;
-	//extractor.compute(keyFrame.image, keyFrame.keypoints, keyFrame.descriptors);
+	keyFrame.index = index;
+
+	//std::vector<cv::KeyPoint>().swap(currFrame.keypoints);
 }
 
 void Triangulation(Frame &img1, Frame &img2, FeatureMap &featureMap, double *cameraPara)
@@ -672,7 +673,7 @@ void Triangulation(Frame &img1, Frame &img2, FeatureMap &featureMap, double *cam
 	std::vector<cv::Point2f> ().swap(img2_goodMatches);
 }
 
-bool EstimateCameraTransformation(std::vector<Frame > &keyFrames, unsigned char *inputPrevFrame, unsigned char **inputFrame, int frameWidth, int frameHeight, FeatureMap &featureMap, double *cameraPara, double trans[3][4])
+bool EstimateCameraTransformation(unsigned long FrameCount, std::vector<KeyFrame> &keyFrames, unsigned char *inputPrevFrame, unsigned char **inputFrame, int frameWidth, int frameHeight, FeatureMap &featureMap, double *cameraPara, double trans[3][4])
 {
 	//Homography
 	Frame currFrame, prevFrame;
@@ -681,7 +682,7 @@ bool EstimateCameraTransformation(std::vector<Frame > &keyFrames, unsigned char 
 	if (inputPrevFrame != NULL)
 		prevFrame.image = cv::Mat(frameHeight, frameWidth, CV_8UC3, inputPrevFrame);
 	std::vector<cv::Point2f>  featureMap_goodMatches, frame_goodMatches;
-	if (!FeatureDetectionAndMatching(featureMap, prevFrame, currFrame, 3000, featureMap_goodMatches, frame_goodMatches, prevFeatureMapGoodMatches, prevFrameGoodMatches))
+	if (!FeatureDetectionAndMatching(featureMap, prevFrame, currFrame, 3000, featureMap_goodMatches, frame_goodMatches, prevFeatureMapInliners, prevFrameInliners))
 		return false;
 
 	MyMatrix H(3, 3);
@@ -722,22 +723,22 @@ bool EstimateCameraTransformation(std::vector<Frame > &keyFrames, unsigned char 
 	trans[2][2] = R.m_lpdEntries[8];
 	trans[2][3] = t.z;
 
-	//	把影像中好的特徵點放入prevFeatureMapGoodMatches  給OpticalFlow計算用
-	//	把場景中好的特徵點放入preScene_goodmatches 給OpticalFlow計算用
-	prevFeatureMapGoodMatches.swap(featureMapInliners);
-	prevFrameGoodMatches.swap(frameInliners);
+	//	把影像中好的特徵點放入prevFeatureMapInliners  給OpticalFlow計算用
+	//	把場景中好的特徵點放入prevFrameInliners 給OpticalFlow計算用
+	prevFeatureMapInliners.swap(featureMapInliners);
+	prevFrameInliners.swap(frameInliners);
 	MyMatrix K;
 	//for (int i = 0; i < 9; ++i)
 //		K.m_lpdEntries[i] = cameraPara[i];
 	if (!keyFrames.size())
 	{
 		//Reference keyframe
-		Frame keyFrame;
-		CreateKeyFrame(currFrame, keyFrame, cameraPara, trans);
-		keyFrames.push_back(keyFrame);
+		KeyFrame keyFrame;
+		CreateKeyFrame(FrameCount, currFrame, keyFrame, cameraPara, trans);
+		//keyFrames.push_back(keyFrame);
 	}
-	//else
-	//	KeyFrameSelection(keyFrames);
+	else
+		KeyFrameSelection(FrameCount, keyFrames);
 
 	std::vector<cv::KeyPoint>().swap(currFrame.keypoints);
 	std::vector<cv::Point2f> ().swap(featureMap_goodMatches);

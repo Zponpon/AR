@@ -41,12 +41,16 @@ public:
 	cv::Mat projMatrix;//The projection matrix is from world coordinate to image coordinate
 };
 
-class KeyFrame : public Frame
+class KeyFrame
 {
 public:
-	cv::Mat transformMatrix;//Pose of the keyframe k with respect to reference keyframe
+	cv::Mat image;
+	std::vector<cv::KeyPoint> feature;
+	cv::Mat descriptors;
+	cv::Mat projMatrix;
+	unsigned long index;
+	//std::vector <cv::Point3f> feature3dPts;
 };
 
-void KeyFrameSelection(std::vector<Frame> &keyFrame);
-void JacobianCostFunction();
+bool KeyFrameSelection(unsigned long index, std::vector<KeyFrame> &keyFrames);
 #endif
