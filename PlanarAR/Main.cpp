@@ -217,6 +217,7 @@ void display(void)
 	{
 		VI.getPixels(dev, frame, true, true);
 
+		//For video
 		/*prevFrame = new unsigned char[VI.getSize(dev)];
 		WriteVideo(writer, frame, FrameCount);*/
 #ifdef DEBUG
@@ -270,13 +271,12 @@ void display(void)
 		//glutWireCube(50.0);
 		//glutSolidSphere(10.0,16,32);
 	}
-	/*else
+	else
 	{
-		if (keyFrame1.image.data && keyFrame2.image.data)
+		if (keyFrames.size() != 0)
 		{
-			if (EstimateCameraTransformation(featureMap, keyFrame1, keyFrame2, frame, winWidth, winHeight, camera_para, trans))
+			if (EstimateCameraTransformation(FrameCount, featureMap, keyFrames, frame, winWidth, winHeight, camera_para, trans))
 			{
-				Triangulation(keyFrame1, keyFrame2, featureMap, camera_para);
 				argConvGlpara(trans, gl_para);
 
 				DrawMode3D(camera_para, winWidth, winHeight, true, CAMERA_ORIENTATION_POSITIVE_Z);
@@ -292,7 +292,7 @@ void display(void)
 				glutWireCube(100.0);
 			}
 		}
-	}*/
+	}
 	glutSwapBuffers();
 	FrameCount++;
 #ifndef DEBUG
@@ -340,7 +340,7 @@ void main(int argc, char *argv[])
 	glutKeyboardFunc(KeyboardFunc);
 
 	InitOpenGL();
-	featureMap.image = cv::imread("11647241_636517923150104_1570377205_n.jpg");
+ 	featureMap.image = cv::imread("11647241_636517923150104_1570377205_n.jpg");
 	CreateFeatureMap(featureMap, 5000);
 
 	t_start = clock();

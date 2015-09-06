@@ -86,12 +86,12 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\opencv\build\include;C:\Users\godtone\Desktop\AR\ARToolKit\include;C:\Users\godtone\Desktop\AR\SiftGPU\src\SiftGPU;D:\Library\opencv_3_beta\build\include;D:\Library\SiftGPU\src\SiftGPU;D:\Library\ARToolKit\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\opencv\build\include;C:\Users\godtone\Desktop\AR\ARToolKit\include;C:\Users\godtone\Desktop\AR\SiftGPU\src\SiftGPU;S:\OpenCV2.4.10\opencv\build\include;S:\AR\SiftGPU\src\SiftGPU;S:\AR\ARToolKit\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\opencv\build\x86\vc12\lib;C:\Users\godtone\Desktop\AR\SiftGPU\lib;C:\Users\godtone\Desktop\AR\ARToolKit\lib;D:\Library\opencv_3_beta\build\x86\vc12\lib;D:\Library\SiftGPU\lib;D:\Library\ARToolKit\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\opencv\build\x86\vc12\lib;C:\Users\godtone\Desktop\AR\SiftGPU\lib;C:\Users\godtone\Desktop\AR\ARToolKit\lib;S:\OpenCV2.4.10\opencv\build\x86\vc12\lib;S:\AR\ARToolKit\lib;S:\AR\SiftGPU\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>/NODEFAULTLIB:"atlthunk"</AdditionalOptions>
       <AdditionalDependencies>opencv_features2d2410d.lib;opencv_calib3d2410d.lib;opencv_core2410d.lib;opencv_highgui2410d.lib;opencv_flann2410d.lib;opencv_nonfree2410d.lib;SIFTGPU.lib;libAR.lib;libARgsub.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>

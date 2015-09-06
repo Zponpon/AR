@@ -67,7 +67,7 @@ void FindGoodMatches(FeatureMap &featureMap, Frame &frame, std::vector<cv::KeyPo
 	std::vector<bool>().swap(GoodMatchesFlag);
 }
 
-void FindGoodMatches(Frame &img1, Frame &img2, std::vector<cv::DMatch> &matches, std::vector<cv::Point2f> &img1_goodMatches, std::vector<cv::Point2f> &img2_goodMatches, std::vector<cv::KeyPoint> &keypoints_3D, cv::Mat &descriptors_3D)
+void FindGoodMatches(KeyFrame &img1, KeyFrame &img2, std::vector<cv::DMatch> &matches, std::vector<cv::Point2f> &img1_goodMatches, std::vector<cv::Point2f> &img2_goodMatches, std::vector<cv::KeyPoint> &keypoints_3D, cv::Mat &descriptors_3D)
 {
 	//This method is to triangulate points, and swap good matching keypoints & descriptors
 
@@ -127,11 +127,11 @@ void FindGoodMatches(Frame &img1, Frame &img2, std::vector<cv::DMatch> &matches,
 			//tempMatch.push_back(goodMatches[i]);
 			img1_goodMatches.push_back(img1.keypoints[goodMatches[i].queryIdx].pt);
 			img2_goodMatches.push_back(img2.keypoints[goodMatches[i].trainIdx].pt);
-			tempkeypoints.push_back(img1.keypoints[goodMatches[i].queryIdx]);
+			//tempkeypoints.push_back(img1.keypoints[goodMatches[i].queryIdx]);
 			keypoints_3D.push_back(img2.keypoints[goodMatches[i].trainIdx]);
-			tempMatch.push_back(goodMatches[i]);
-			tempMatch[j].queryIdx = j;
-			tempMatch[j].trainIdx = j;
+			//tempMatch.push_back(goodMatches[i]);
+			//tempMatch[j].queryIdx = j;
+			//tempMatch[j].trainIdx = j;
 			img2.descriptors.row(goodMatches[i].trainIdx).copyTo(tempdescriptors.row(j));//save the match points's descriptors
 			++j;
 		}
@@ -286,11 +286,11 @@ void FlannMatching(cv::Mat &descriptors_featureMap, cv::Mat &descriptors_frame, 
 	glutSetWindow(win);
 }
 
-void OpticalFlow(FeatureMap &featureMap, Frame &prevFrame, Frame &currFrame, std::vector<cv::Point2f> &currPts, std::vector<int> &good3DMatches)
+void OpticalFlow(FeatureMap &featureMap, KeyFrame &prevFrame, Frame &currFrame, std::vector<cv::Point2f> &currPts, std::vector<int> &good3DMatches)
 {
 	std::vector<cv::Point2f> prevPts;
 	std::vector<cv::Point2f> tempPts;
-	//cv::KeyPoint::convert(prevFrame.keypoints_3D, prevPts);
+	cv::KeyPoint::convert(prevFrame.keypoints_3D, prevPts);
 	std::vector<cv::Point2f> ReprojPts;
 	cv::KeyPoint::convert(featureMap.reProjPts, ReprojPts);
 
@@ -299,7 +299,7 @@ void OpticalFlow(FeatureMap &featureMap, Frame &prevFrame, Frame &currFrame, std
 	cv::calcOpticalFlowPyrLK(prevFrame.image, currFrame.image, ReprojPts, tempPts, status, error);
 	for (int i = 0; i < tempPts.size(); ++i)
 	{
-		if (!(status[i] == 0 || error[i] > 5))
+		if (!(status[i] == 0 || (cv::norm(tempPts[i] - ReprojPts[i]) <= 5)))
 		{
 			currPts.push_back(tempPts[i]);
 			good3DMatches.push_back(i);

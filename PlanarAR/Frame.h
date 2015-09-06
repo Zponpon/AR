@@ -45,11 +45,13 @@ class KeyFrame
 {
 public:
 	cv::Mat image;
-	std::vector<cv::KeyPoint> feature;
+	std::vector<cv::KeyPoint> keypoints;
 	cv::Mat descriptors;
 	cv::Mat projMatrix;
+
+	std::vector<cv::KeyPoint> keypoints_3D;
+	cv::Mat descriptors_3D;
 	unsigned long index;
-	//std::vector <cv::Point3f> feature3dPts;
 };
 
 bool KeyFrameSelection(unsigned long index, std::vector<KeyFrame> &keyFrames);

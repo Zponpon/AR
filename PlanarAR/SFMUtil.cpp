@@ -190,6 +190,7 @@ bool Find3DCoordinates(MyMatrix &K, std::vector<MyMatrix> &Rs, std::vector<MyMat
 		Ps.push_back(P);
 	}
 //	Find3DCoordinates(Ps, pts, r3DPt);
+	return true;
 }
 
 /***************************************************************************************************************/

@@ -59,10 +59,10 @@ public:
 };*/
 
 void CreateFeatureMap(FeatureMap &featureMap, int minHessian);
-void Triangulation(Frame &frame1, Frame &frame2, FeatureMap &featureMap, double *cameraPara);
+void Triangulation(std::vector<KeyFrame> &keyFrames, FeatureMap &featureMap, double *cameraPara);
 //For homography
 bool EstimateCameraTransformation(unsigned long FrameCount, std::vector<KeyFrame> &keyFrames, unsigned char *inputprevFrame, unsigned char **inputFrame, int frameWidth, int frameHeight, FeatureMap &featureMap, double *cameraPara, double trans[3][4]);
 //For Visual odometry
-bool EstimateCameraTransformation(FeatureMap &featureMap, Frame &prevImgTemp, Frame &previmg, unsigned char *inputFrame, int frameWidth, int frameHeight, double *cameraPara, double trans[3][4]);
+bool EstimateCameraTransformation(unsigned long FrameCount, FeatureMap &featureMap, std::vector<KeyFrame> &keyFrames, unsigned char *inputFrame, int frameWidth, int frameHeight, double *cameraPara, double trans[3][4]);
 
 #endif
