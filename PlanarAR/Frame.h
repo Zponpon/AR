@@ -1,6 +1,9 @@
 #ifndef FRAME_H
 #define FRAME_H
+#define PI 3.141592653589793
 #include <vector>
+#include <cmath>
+#include <ctime>
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/features2d/features2d.hpp"
@@ -9,7 +12,10 @@
 #include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/video/video.hpp"
 #include "opencv2\stitching\stitcher.hpp"
+#include "Matrix\MyMatrix.h"
+#include "BasicType.h"
 
+//extern std::vector<MyMatrix> projMatrixSet;
 
 class Frame
 {
@@ -19,26 +25,21 @@ public:
 		image.release();
 		std::vector<cv::KeyPoint>().swap(keypoints);
 		descriptors.release();
-		std::vector<cv::KeyPoint>().swap(keypoints_3D);
-		descriptors_3D.release();
-		projMatrix.release();
 	}
 	Frame& operator= (Frame &frame)
 	{
 		frame.image.copyTo(image);
 		keypoints = frame.keypoints;
 		frame.descriptors.copyTo(descriptors);
-		keypoints_3D = frame.keypoints_3D;
-		frame.descriptors_3D.copyTo(descriptors_3D);
-		frame.projMatrix.copyTo(projMatrix);
 		return *this;
 	}
 	cv::Mat image;
 	std::vector<cv::KeyPoint> keypoints;	//Record all keypoints in the image
 	cv::Mat descriptors;	//Record all descriptors in the image
-	std::vector<cv::KeyPoint> keypoints_3D; //3D feature's keypoint(2D) in the image
-	cv::Mat descriptors_3D; //Record the 3D points descriptors in the 2D image
-	cv::Mat projMatrix;//The projection matrix is from world coordinate to image coordinate
+	clock_t timeStamp;
+	bool state;
+	MyMatrix R;
+	Vector3d t;
 };
 
 class KeyFrame
@@ -47,12 +48,14 @@ public:
 	cv::Mat image;
 	std::vector<cv::KeyPoint> keypoints;
 	cv::Mat descriptors;
-	cv::Mat projMatrix;
+	MyMatrix projMatrix;
+	MyMatrix R;
+	Vector3d t;
 
 	std::vector<cv::KeyPoint> keypoints_3D;
 	cv::Mat descriptors_3D;
 	unsigned long index;
 };
 
-bool KeyFrameSelection(unsigned long index, std::vector<KeyFrame> &keyFrames);
+bool KeyFrameSelection(unsigned long index, MyMatrix &R, Vector3d t, std::vector<KeyFrame> &keyFrames);
 #endif

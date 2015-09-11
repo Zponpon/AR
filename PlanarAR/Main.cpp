@@ -9,9 +9,9 @@
 #include "FeatureProcess.h"
 #include "DebugFunc.h"
 #include "Video.h"
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/opencv.hpp>
+/*#include "opencv2/core/core.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/opencv.hpp"*/
 
 #define VIEW_VOLUME_NEAR 1.0
 #define VIEW_VOLUME_FAR 3000.0
@@ -29,6 +29,7 @@ unsigned char *prevFrame = NULL;
 double camera_para[9] = { 9.1317151001595698e+002, 0.00000, 3.9695336273339319e+002, 0.00000, 9.1335671139215276e+002, 2.9879860363446750e+002, 0.00000, 0.00000, 1.00000 };
 
 FeatureMap featureMap;
+std::vector<FeatureMap> featureMaps;
 cv::VideoWriter writer("GoProTestVideo.avi", CV_FOURCC('M', 'J', 'P', 'G'), 10.0, cv::Size(800, 600));
 
 clock_t t_start,t_end;
@@ -246,7 +247,8 @@ void display(void)
 	
 	double trans[3][4];
 	double gl_para[16];
-
+	//if (!FeatureDetectionAndMatching())
+	//	return;
 	bool rtn = EstimateCameraTransformation(FrameCount, keyFrames, prevFrame, &frame, winWidth, winHeight, featureMap, camera_para, trans);
 
 	if (rtn == true)

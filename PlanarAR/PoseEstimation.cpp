@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <iostream>
 #include <GL/gl.h>
+#include <map>
 #include "glut.h"
 #include <cmath>
 #include "BasicType.h"
@@ -534,9 +535,9 @@ void Debug3D(KeyFrame &image, char *name, double *cameraPara)
 	Point4D.at<double>(1) = 300.0;
 	Point4D.at<double>(2) = 0.0;
 	Point4D.at<double>(3) = 1.0;
-	cout << K << endl << image.projMatrix << endl;
+	//cout << K << endl << image.projMatrix << endl;
 	//mat = K * image.projMatrix;
-	uvw = K * image.projMatrix * Point4D;
+	//uvw = K * image.projMatrix * Point4D;
 	float x, y;
 	x = (float)uvw.at<double>(0) / uvw.at<double>(2);
 	y = (float)uvw.at<double>(1) / uvw.at<double>(2);
@@ -553,153 +554,171 @@ void Debug3D(KeyFrame &image, char *name, double *cameraPara)
 	waitKey(0);
 }
 
-void calcProjectionMatrix(cv::Mat &projMatrix, const double trans[3][4], const double *cameraPara)
+void InitializeMatrix(KeyFrame &keyFrame, const double trans[3][4], const double *cameraPara)
 {
 	//Calculate the projection matrix which projects the points from the world coordinate to image coordinate
-	if (projMatrix.rows == 0 || projMatrix.cols == 0)
-		projMatrix.create(3, 4, CV_64F);
-	cv::Mat Rt(3, 4, CV_64F);	//Rotation & Translation
-	cv::Mat K(3, 3, CV_64F);	//Camera intrinsic parameter
+	if (keyFrame.projMatrix.m_iM == 0 || keyFrame.projMatrix.m_iN == 0)
+		keyFrame.projMatrix.CreateMatrix(3, 4);
+	
+	MyMatrix K(3, 3);
 	for (int i = 0; i < 9; ++i) 
-		K.at<double>(i) = cameraPara[i];
+		K.m_lpdEntries[i] = cameraPara[i];
+	keyFrame.projMatrix.m_lpdEntries[0]	 = trans[0][0];
+	keyFrame.projMatrix.m_lpdEntries[1]	 = trans[0][1];
+	keyFrame.projMatrix.m_lpdEntries[2]	 = trans[0][2];
+	keyFrame.projMatrix.m_lpdEntries[3]	 = trans[0][3];
+	keyFrame.projMatrix.m_lpdEntries[4]	 = trans[1][0];
+	keyFrame.projMatrix.m_lpdEntries[5]	 = trans[1][1];
+	keyFrame.projMatrix.m_lpdEntries[6]	 = trans[1][2];
+	keyFrame.projMatrix.m_lpdEntries[7]	 = trans[1][3];
+	keyFrame.projMatrix.m_lpdEntries[8]	 = trans[2][0];
+	keyFrame.projMatrix.m_lpdEntries[9]	 = trans[2][1];
+	keyFrame.projMatrix.m_lpdEntries[10] = trans[2][2];
+	keyFrame.projMatrix.m_lpdEntries[11] = trans[2][3];
+	keyFrame.projMatrix = K * keyFrame.projMatrix;
 
-	Rt.at<double>(0)  =  trans[0][0];
-	Rt.at<double>(1)  =  trans[0][1];
-	Rt.at<double>(2)  =  trans[0][2];
-	Rt.at<double>(3)  =  trans[0][3];
-	Rt.at<double>(4)  =  trans[1][0];
-	Rt.at<double>(5)  =  trans[1][1];
-	Rt.at<double>(6)  =  trans[1][2];
-	Rt.at<double>(7)  =	 trans[1][3];
-	Rt.at<double>(8)  =  trans[2][0];
-	Rt.at<double>(9)  =  trans[2][1];
-	Rt.at<double>(10) =  trans[2][2];
-	Rt.at<double>(11) =  trans[2][3];
+	keyFrame.R.CreateMatrix(3, 3);
+	keyFrame.R.m_lpdEntries[0] = trans[0][0];
+	keyFrame.R.m_lpdEntries[1] = trans[0][1];
+	keyFrame.R.m_lpdEntries[2] = trans[0][2];
+	keyFrame.R.m_lpdEntries[3] = trans[1][0];
+	keyFrame.R.m_lpdEntries[4] = trans[1][1];
+	keyFrame.R.m_lpdEntries[5] = trans[1][2];
+	keyFrame.R.m_lpdEntries[6] = trans[2][0];
+	keyFrame.R.m_lpdEntries[7] = trans[2][1];
+	keyFrame.R.m_lpdEntries[8] = trans[2][2];
 
-	projMatrix = Rt;/*In triangulation process, we need to multiple K*/
+	keyFrame.t.x = trans[0][3];
+	keyFrame.t.y = trans[1][3];
+	keyFrame.t.z = trans[2][3];
 }
 void CreateKeyFrame(unsigned long index, Frame &currFrame, std::vector<cv::Point2f> &currFrameInliers, std::vector<KeyFrame> &keyFrames, double *cameraPara, double trans[3][4])
 {
 	KeyFrame keyFrame;
 	currFrame.image.copyTo(keyFrame.image);
 	keyFrame.keypoints.swap(currFrame.keypoints);
-	currFrame.descriptors.copyTo(keyFrame.descriptors);
-	calcProjectionMatrix(keyFrame.projMatrix, trans, cameraPara);
+	currFrame.descriptors.copyTo(keyFrame.descriptors);//Bug
+	InitializeMatrix(keyFrame, trans, cameraPara);
 	keyFrame.index = index;
 	keyFrames.push_back(keyFrame);
-//	std::vector<cv::KeyPoint>().swap(currFrame.keypoints);
 }
 
-void Triangulation(std::vector<KeyFrame> &keyFrames, FeatureMap &featureMap, double *cameraPara)
+bool Triangulation(KeyFrame &KF1, KeyFrame &KF2, FeatureMap &featureMap)
 {
-	MyMatrix K(3, 3);
-	for (int i = 0; i < 9; ++i)
-		K.m_lpdEntries[i] = cameraPara[i];
-	//Feature detection and matching
+	//For two case
 	std::vector<cv::DMatch> matches;
-	std::vector<cv::Point2f> prevKeyFrameGoodMatches, latestKeyFrameGoodMatches;
-	std::vector<cv::KeyPoint> keypoints_3D;
-	cv::Mat descriptors_3D;
-	unsigned long latestIdx = keyFrames.size() - 1;
-	std::vector<cv::Point2f> keyFrameFeaturePts;
-	for (int i = 0; i < keyFrames.size() - 1; ++i)
+	std::vector<cv::Point2f> KF1GoodMatches, KF2GoodMatches;
+	std::vector<int> goodPts3DIdx;
+	std::vector<cv::Point3f> pts3D;
+	std::vector<cv::KeyPoint> keypointsMatches[2];
+	cv::Mat descriptorsMatches[2];
+	if (KF1.keypoints.size() == 0 || KF1.descriptors.rows == 0)
+		SurfDetection(KF1.image, KF1.keypoints, KF1.descriptors, 3000);
+	if (KF2.keypoints.size() == 0 || KF2.descriptors.rows == 0)
+		SurfDetection(KF2.image, KF2.keypoints, KF2.descriptors, 3000);
+	FlannMatching(KF1.descriptors, KF2.descriptors, matches);
+	FindGoodMatches(KF1, KF2, matches, KF1GoodMatches, KF2GoodMatches, keypointsMatches, descriptorsMatches);
+	if (KF1GoodMatches.size() == 0)
 	{
-		//FlannMatching(keyFrames[i].descriptors, keyFrames[latestIdx].descriptors, matches);
-		//FindGoodMatches(keyFrames[i], keyFrames[latestIdx], matches, prevKeyFrameGoodMatches, latestKeyFrameGoodMatches, keypoints_3D, descriptors_3D);
-		//keyFrameFeaturePts
+		std::vector<cv::Point2f>().swap(KF1GoodMatches);
+		std::vector<cv::Point2f>().swap(KF2GoodMatches);
+		return false;
 	}
-	FlannMatching(keyFrames[keyFrames.size() - 2].descriptors, keyFrames[keyFrames.size() - 1].descriptors, matches);
-	FindGoodMatches(keyFrames[keyFrames.size() - 2], keyFrames[keyFrames.size() - 1], matches, prevKeyFrameGoodMatches, latestKeyFrameGoodMatches, keypoints_3D, descriptors_3D);
-	if (prevKeyFrameGoodMatches.size() == 0)
+	for (int i = 0; i < KF1GoodMatches.size(); ++i)
 	{
-		std::vector<cv::Point2f>().swap(prevKeyFrameGoodMatches);
-		std::vector<cv::Point2f>().swap(latestKeyFrameGoodMatches);
-		return;
-	}
-	std::vector<MyMatrix> projMatrixSet(keyFrames.size());
-	for (int i = 0; i < projMatrixSet.size(); ++i)
-	{
-		MyMatrix Matrix(3, 4);
-		for (int j = 0; j < 12; ++j)
-			Matrix.m_lpdEntries[j] = keyFrames[i].projMatrix.at<double>(i);
-		projMatrixSet.push_back(Matrix);
-	}
-	/*MyMatrix Matrix1(3, 4), Matrix2(3, 4);
-	for (int i = 0; i < 12; ++i)
-	{
-		Matrix1.m_lpdEntries[i] = keyFrames[keyFrames.size() - 2].projMatrix.at<double>(i);
-		Matrix2.m_lpdEntries[i] = keyFrames[keyFrames.size() - 1].projMatrix.at<double>(i);
-	}*/
-
-	//Triangulate the points
-	vector<int> good3DPointsIndex;
-	std::vector<cv::Point3f> feature3D;
-	cv::Mat mask;
-	//cv::findHomography(prevKeyFrameGoodMatches, latestKeyFrameGoodMatches, mask, CV_RANSAC);
-	std::vector<cv::Point2f> prevKeyFrameInliers, latestKeyFrameInliers;
-	for (int i = 0; i < mask.rows; ++i)
-	{
-		if (mask.at<uchar>(i))
+		//Triangulation
+		cv::Point3f pt3D;
+		if (Find3DCoordinates(KF1.projMatrix, KF2.projMatrix,
+			KF1GoodMatches[i], KF2GoodMatches[i], pt3D))
 		{
-			prevKeyFrameInliers.push_back(prevKeyFrameGoodMatches[i]);
-			latestKeyFrameInliers.push_back(latestKeyFrameGoodMatches[i]);
+			pts3D.push_back(pt3D);
+			goodPts3DIdx.push_back(i);
 		}
 	}
-	for (std::size_t i = 0; i < prevKeyFrameGoodMatches.size(); ++i)
+	for (int i = 0; i < pts3D.size(); ++i)
 	{
-		cv::Point3f pt;
-		/*if (Find3DCoordinates(K, projMatrixSet, latestKeyFraqmeGoodMatches, pt))
-		{
-		}*/
-		/*if (Find3DCoordinates(K, Matrix1, Matrix2, prevKeyFrameGoodMatches[i], latestKeyFrameGoodMatches[i], pt))
-		{
-			feature3D.push_back(pt);
-			good3DPointsIndex.push_back(i);
-		}*/
-	}
-	if (feature3D.size() == 0) return;
-	//Find the 3D point which are out the marker
-	for (std::size_t i = 0; i < feature3D.size(); ++i)
-	{
-		if ((feature3D[i].x > 400.0f || feature3D[i].x < -400.0f
-			|| feature3D[i].y > 300.0f || feature3D[i].y < -300.0f))
-			featureMap.feature3D.push_back(feature3D[i]);
+		if ((pts3D[i].x > 400.0f || pts3D[i].x < -400.0f
+			|| pts3D[i].y > 300.0f || pts3D[i].y < -300.0f))
+			featureMap.feature3D.push_back(pts3D[i]);
 		else
-			good3DPointsIndex[i] = -1;
+			goodPts3DIdx[i] = -1;
 	}
-	//if (img2.keypoints_3D.size() != 0) img2.keypoints_3D.clear();
-	//if (featureMap.reProjPts.size() != 0)featureMap.reProjPts.clear();
-	if (keyFrames[keyFrames.size() - 1].descriptors_3D.rows != 0 || keyFrames[keyFrames.size() - 1].descriptors_3D.cols != 0) 
-		keyFrames[keyFrames.size() - 1].descriptors_3D.release();
-	keyFrames[keyFrames.size() - 1].descriptors_3D.create(featureMap.feature3D.size(), descriptors_3D.cols, descriptors_3D.type());
-	for (std::size_t i = 0, j = 0; i < good3DPointsIndex.size(); ++i)
+	if (KF1.descriptors_3D.rows != 0 || KF1.descriptors_3D.cols != 0)
+		KF1.descriptors_3D.create(featureMap.feature3D.size(), descriptorsMatches[0].cols, descriptorsMatches[0].type());
+	if (KF2.descriptors_3D.rows != 0 || KF2.descriptors_3D.cols != 0)
+		KF2.descriptors_3D.create(featureMap.feature3D.size(), descriptorsMatches[1].cols, descriptorsMatches[1].type());
+	for (std::size_t i = 0, j = 0; i < goodPts3DIdx.size(); ++i)
 	{
-		if (good3DPointsIndex[i] != -1)
+		if (goodPts3DIdx[i] != -1)
 		{
-			/*********************************************************************************************
-			/*In the FindGoodMatches function which is for triangulate
-			/*Record the goodMatches's KeyPoints and descriptors in keypoints_3D & descriptors_3D
-			*********************************************************************************************/
-			keyFrames[keyFrames.size() - 1].keypoints_3D.push_back(keypoints_3D[good3DPointsIndex[i]]);
-			featureMap.reProjPts.push_back(keypoints_3D[good3DPointsIndex[i]]);
-			descriptors_3D.row(good3DPointsIndex[i]).copyTo(keyFrames[keyFrames.size() - 1].descriptors_3D.row(j));
+			KF1.keypoints_3D.push_back(keypointsMatches[0][goodPts3DIdx[i]]);
+			KF2.keypoints_3D.push_back(keypointsMatches[1][goodPts3DIdx[i]]);
+			featureMap.reProjPts.push_back(keypointsMatches[1][goodPts3DIdx[i]]);
+			//descriptorsMatches[0].row(goodPts3DIdx[i]).copyTo(KF1.descriptors_3D.row(j));
+			//descriptorsMatches[1].row(goodPts3DIdx[i]).copyTo(KF2.descriptors_3D.row(j));
 			++j;
 		}
 	}
 
-	vector<int>().swap(good3DPointsIndex);
+	/*vector<int>().swap(goodPts3DIdx);
 	std::vector<cv::DMatch>  ().swap(matches);
 	std::vector<cv::KeyPoint>().swap(keypoints_3D);
-	std::vector<cv::Point3f> ().swap(feature3D);
+	std::vector<cv::Point3f> ().swap(pts3D);
 	std::vector<cv::Point2f>().swap(prevKeyFrameGoodMatches);
-	std::vector<cv::Point2f>().swap(latestKeyFrameGoodMatches);
+	std::vector<cv::Point2f>().swap(latestKeyFrameGoodMatches);*/
+	return true;
+}
+
+bool Triangulation(std::vector<KeyFrame> &keyFrames, FeatureMap &featureMap)
+{
+	//For multiple cases
+	std::vector<MyMatrix> Ps;
+	std::vector<cv::DMatch> goodMatches[2];
+	//std::vector<cv::Point2f> prevKeyFrameGoodMatches, latestKeyFrameGoodMatches;
+	std::multimap<int, int> matchIdx;
+	for (int i = 0; i < 2; ++i)
+	{
+		std::vector<cv::KeyPoint> keypointsMatches[3];
+		cv::Mat descriptorsMatches[3];
+		FlannMatching(keyFrames[i].descriptors, keyFrames[2].descriptors, goodMatches[i]);
+		FindGoodMatches(keyFrames[i], keyFrames[1], goodMatches[i]);
+		Ps.push_back(keyFrames[i].projMatrix);
+	}
+	Ps.push_back(keyFrames[keyFrames.size() - 1].projMatrix);
+	for (int i = 0; i < 2; ++i)
+	{
+		for (int j = 0; j < goodMatches[i].size(); ++i)
+		{
+			matchIdx.insert(std::pair<int, int>(goodMatches[i][j].trainIdx, goodMatches[i][j].queryIdx));
+		}
+	}
+	for (std::multimap<int, int>::iterator it = matchIdx.begin(); it != matchIdx.end();)
+	{
+		int queryIdx1 = it->second;
+		int trainIdx1 = it->first;
+		it++;
+		int trainIdx2 = it->first;
+		int queryIdx2 = it->second;
+		if (trainIdx1 == trainIdx2)
+		{
+			cv::Point3f pt3D;
+			std::vector<cv::Point2f> pts2D;
+			pts2D.push_back(keyFrames[keyFrames.size() - 3].keypoints[queryIdx1].pt);
+			pts2D.push_back(keyFrames[keyFrames.size() - 2].keypoints[queryIdx2].pt);
+			pts2D.push_back(keyFrames[keyFrames.size() - 1].keypoints[trainIdx1].pt);
+			if (Find3DCoordinates(Ps, pts2D, pt3D))
+			{
+			}
+			it++;
+		}
+	}
+	return true;
 }
 
 bool EstimateCameraTransformation(unsigned long FrameCount, std::vector<KeyFrame> &keyFrames, unsigned char *inputPrevFrame, unsigned char **inputFrame, int frameWidth, int frameHeight, FeatureMap &featureMap, double *cameraPara, double trans[3][4])
 {
 	//Homography
 	Frame currFrame, prevFrame;
-
 	currFrame.image = cv::Mat(frameHeight, frameWidth, CV_8UC3, *inputFrame);
 	if (inputPrevFrame != NULL)
 		prevFrame.image = cv::Mat(frameHeight, frameWidth, CV_8UC3, inputPrevFrame);
@@ -752,10 +771,11 @@ bool EstimateCameraTransformation(unsigned long FrameCount, std::vector<KeyFrame
 	}
 	else
 	{
-		if (KeyFrameSelection(FrameCount, keyFrames))
+		if (KeyFrameSelection(FrameCount, R, t, keyFrames))
 		{
 			CreateKeyFrame(FrameCount, currFrame, frameinliers, keyFrames, cameraPara, trans);
-			Triangulation(keyFrames, featureMap, cameraPara);
+			if (!Triangulation(keyFrames[0], keyFrames[1], featureMap));
+				keyFrames.pop_back();
 		}
 	}
 	//	把影像中好的特徵點放入prevFeatureMapinliers  給OpticalFlow計算用
@@ -774,11 +794,11 @@ bool EstimateCameraTransformation(unsigned long FrameCount, std::vector<KeyFrame
 bool EstimateCameraTransformation(unsigned long FrameCount, FeatureMap &featureMap, std::vector<KeyFrame> &keyFrames, unsigned char *inputFrame, int frameWidth, int frameHeight, double *cameraPara, double trans[3][4])
 {
 	//Visual Odometry
-	if (featureMap.feature3D.size() < 4)
+	if (featureMap.feature3D.size() < 4 && keyFrames.size() < 2)
 	{
-		cout << "FeatureMap 3D feature's size is small than four！！\n";
-		cout << "Size : " << featureMap.feature3D.size() << endl;
-		cout << "KeyFrames Size : " << keyFrames.size() << endl;
+		//cout << "FeatureMap 3D feature's size is small than four！！\n";
+		//cout << "Size : " << featureMap.feature3D.size() << endl;
+		//cout << "KeyFrames Size : " << keyFrames.size() << endl;
 		return false;
 	}
 	Frame currFrame;
@@ -786,21 +806,21 @@ bool EstimateCameraTransformation(unsigned long FrameCount, FeatureMap &featureM
 	std::vector<cv::DMatch> prevFrameMatches;
 	std::vector<cv::Point2f> currFrameFeatures;
 	std::vector<cv::KeyPoint> keypoints;
-	//SurfDetection(currFrame.image, currFrame.keypoints, currFrame.descriptors, 1000);
-	//if (currFrame.keypoints.size() == 0) return false;
+	SurfDetection(currFrame.image, currFrame.keypoints, currFrame.descriptors, 3000);
+	if (currFrame.keypoints.size() == 0) return false;
 	std::vector<int> good3DMatchesIdx;
 	//cout << "3D's Size : " << featureMap.feature3D.size() << endl;
 	//cout << "Size : " << featureMap.reProjPts.size() << endl;
 	OpticalFlow(featureMap, keyFrames, currFrame, currFrameFeatures, good3DMatchesIdx);
-	if (currFrameFeatures.size() < 4)
+	/*if (currFrameFeatures.size() < 4)
 	{
 		cout << "Vo currFrame matching features's size is smaller than four！！\n";
 		cout << "Size : " << currFrameFeatures.size() << endl;
 		return false;
-	}
-	/*FlannMatching(prevFrame.descriptors_3D, currFrame.descriptors, prevFrameMatches);
-	FindGoodMatches(prevFrame, currFrame, prevFrameMatches, good3DMatches, currFrameGoodmatches);
-	if (currFrame_goodmatches.size() < 4)
+	}*/
+	//FlannMatching(keyFrames[keyFrames.size() - 1].descriptors_3D, currFrame.descriptors, prevFrameMatches);
+	//FindGoodMatches(prevFrame, currFrame, prevFrameMatches, good3DMatches, currFrameGoodmatches);*/
+	/*if (currFrame_goodmatches.size() < 4)
 	{
 		cout << "NewImage matching features's size is smaller than four！！\n";
 		cout << "Size : " << currFrame_goodmatches.size();
@@ -817,52 +837,46 @@ bool EstimateCameraTransformation(unsigned long FrameCount, FeatureMap &featureM
 	cv::Mat Rm(3, 3, CV_64F); //Rotation matrix
 	for (int i = 0; i < 9; i++) 
 		cameraMatrix.at<double>(i) = cameraPara[i];
-
-	/*****************************************************************************************/
-	/*	The rotation vector and translaion vector are calculated by OpenCV function solvePnP**/
-	/*	These two vectors are from world coordinate system to camera coordinate system*********/
-	/*****************************************************************************************/
 	cv::Mat inliers;
 	cv::solvePnPRansac(feature3D, currFrameFeatures, cameraMatrix, distCoeffs, rvec, tvec, false, 100, 8.0, 100, inliers);
 	cv::Rodrigues(rvec, Rm); //Rotation vector to Rotation matrix
 	std::vector<cv::Point3f> feature3DInliers;
 	std::vector<cv::Point2f> currFrameFeaturesInliers;
-	//cout << inliers << endl;
-	cout << Rm << endl << tvec << endl;
+	//cout << Rm << endl << tvec << endl;
 	for (int i = 0; i < inliers.rows; ++i)
 	{
 		int index = inliers.at<int>(i);
 		feature3DInliers.push_back(feature3D[index]);
 		currFrameFeaturesInliers.push_back(currFrameFeatures[index]);
 	}
-	//Rm = Rm.t();
-	//tvec = -Rm*tvec;
-	cv::Mat T(4, 4, Rm.type());
-	T(cv::Range(0, 3), cv::Range(0, 3)) = Rm * 1;
-	T(cv::Range(0, 3), cv::Range(3, 4)) = tvec * 1;
-	double *p = T.ptr<double>(3);
-	p[0] = p[1] = p[2] = 0; p[3] = 1;
-	//T = T.inv();
-	//Projection Matrix is from world coordinate to camera coordinate
-	trans[0][0] = T.at<double>(0);
-	trans[0][1] = T.at<double>(1);
-	trans[0][2] = T.at<double>(2);
-	trans[0][3] = T.at<double>(3);
-	trans[1][0] = T.at<double>(4);
-	trans[1][1] = T.at<double>(5);
-	trans[1][2] = T.at<double>(6);
-	trans[1][3] = T.at<double>(7);
-	trans[2][0] = T.at<double>(8);
-	trans[2][1] = T.at<double>(9);
-	trans[2][2] = T.at<double>(10);
-	trans[2][3] = T.at<double>(11);
-	cout << T << endl;
-	if (KeyFrameSelection(FrameCount, keyFrames))
+	
+	trans[0][0] = Rm.at<double>(0);
+	trans[0][1] = Rm.at<double>(1);
+	trans[0][2] = Rm.at<double>(2);
+	trans[0][3] = tvec.at<double>(0);
+	trans[1][0] = Rm.at<double>(3);
+	trans[1][1] = Rm.at<double>(4);
+	trans[1][2] = Rm.at<double>(5);
+	trans[1][3] = tvec.at<double>(1);
+	trans[2][0] = Rm.at<double>(6);
+	trans[2][1] = Rm.at<double>(7);
+	trans[2][2] = Rm.at<double>(8);
+	trans[2][3] = tvec.at<double>(2);
+	MyMatrix R(3, 3);
+	Vector3d t;
+	for (int i = 0; i < 9; ++i)
+		R.m_lpdEntries[i] = Rm.at<double>(i);
+	t.x = tvec.at<double>(0);
+	t.y = tvec.at<double>(1);
+	t.z = tvec.at<double>(2);
+	if (KeyFrameSelection(FrameCount, R, t, keyFrames))
 	{
-		//KeyFrame keyFrame;
 		CreateKeyFrame(FrameCount, currFrame, currFrameFeaturesInliers, keyFrames, cameraPara, trans);
-		Debug3D(keyFrames[keyFrames.size() - 1], "VO.JPG",cameraPara);
-		Triangulation(keyFrames, featureMap, cameraPara);
+		//cout << keyFrames.size() << endl;
+
+		//cout << keyFrames[keyFrames.size() - 2].descriptors.rows << ' ' << keyFrames[keyFrames.size() - 1].descriptors.rows << endl;
+		if (!Triangulation(keyFrames[keyFrames.size() - 2], keyFrames[keyFrames.size() - 1], featureMap))
+			keyFrames.pop_back();
 	}
 	cout << "VO is OK " << currFrameFeatures.size() << endl;
 	std::vector<cv::Point3f> ().swap(feature3D);

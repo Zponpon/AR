@@ -11,6 +11,7 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/video/video.hpp"
+#include "PoseEstimation.h"
 #include "debugfunc.h"
 
 using std::cout;
@@ -29,8 +30,10 @@ bool FeatureDetectionAndMatching(FeatureMap &featureMap, Frame &prevFrame, Frame
 //For homography
 void FindGoodMatches(FeatureMap &featureMap, Frame &frame, std::vector<cv::KeyPoint> &keypoints_scene, std::vector<cv::DMatch> &matches, std::vector<cv::Point2f> &featureMapGoodmatches, std::vector<cv::Point2f> &frameGoodmatches);
 //For triangulate points
-void FindGoodMatches(KeyFrame &img1, KeyFrame &img2, std::vector<cv::DMatch> &matches, std::vector<cv::Point2f> &img1_goodMatches, std::vector<cv::Point2f> &img2_goodMatches, std::vector<cv::KeyPoint> &keypoints_3D, cv::Mat &descriptors_3D);
+//void FindGoodMatches(KeyFrame &img1, KeyFrame &img2, std::vector<cv::DMatch> &matches, std::vector<cv::Point2f> &img1_goodMatches, std::vector<cv::Point2f> &img2_goodMatches, std::vector<cv::KeyPoint> &keypoints_3D, cv::Mat &descriptors_3D);
+void FindGoodMatches(KeyFrame &img1, KeyFrame &img2, std::vector<cv::DMatch> &matches, std::vector<cv::Point2f> &img1_goodMatches, std::vector<cv::Point2f> &img2_goodMatches, std::vector<cv::KeyPoint> *keypointsMatches, cv::Mat *descriptorsMatches);
+void FindGoodMatches(KeyFrame &prevKeyFrame, KeyFrame &latestKeyFrame, std::vector<cv::DMatch> &matches);
 //For 3D points
-void FindGoodMatches(Frame &img1, Frame &img2, std::vector<cv::DMatch> &matches, std::vector<int> &good3DMatches, std::vector<cv::Point2f> &img2_goodMatches);
+//void FindGoodMatches(Frame &img1, Frame &img2, std::vector<cv::DMatch> &matches, std::vector<int> &good3DMatches, std::vector<cv::Point2f> &img2_goodMatches);
 
 #endif

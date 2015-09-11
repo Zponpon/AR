@@ -5,6 +5,7 @@
 #include <vector>
 #include "SiftGPU.h"
 #include "Frame.h"
+#include "opencv2\opencv.hpp"
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/features2d/features2d.hpp"
@@ -20,8 +21,8 @@ public:
 	cv::Mat image;
 	std::vector<cv::KeyPoint> keypoints;
 	cv::Mat descriptors;
-	std::vector<cv::KeyPoint> reProjPts;
-	std::vector<cv::Point3f> feature3D; 																	
+	std::vector<cv::KeyPoint> reProjPts;//不要的
+	std::vector<cv::Point3f> feature3D; 		//不要的															
 };
 void CreateFeatureMap(FeatureMap &featureMap, int minHessian);
 void Triangulation(std::vector<KeyFrame> &keyFrames, FeatureMap &featureMap, double *cameraPara);

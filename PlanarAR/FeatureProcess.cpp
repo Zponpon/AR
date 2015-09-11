@@ -67,9 +67,10 @@ void FindGoodMatches(FeatureMap &featureMap, Frame &frame, std::vector<cv::KeyPo
 	std::vector<bool>().swap(GoodMatchesFlag);
 }
 
-void FindGoodMatches(KeyFrame &img1, KeyFrame &img2, std::vector<cv::DMatch> &matches, std::vector<cv::Point2f> &img1_goodMatches, std::vector<cv::Point2f> &img2_goodMatches, std::vector<cv::KeyPoint> &keypoints_3D, cv::Mat &descriptors_3D)
+void FindGoodMatches(KeyFrame &KF1, KeyFrame &KF2, std::vector<cv::DMatch> &matches, std::vector<cv::Point2f> &KF1GoodMatches, std::vector<cv::Point2f> &KF2GoodMatches, std::vector<cv::KeyPoint> keypointsMatches[2], cv::Mat descriptorsMatches[2])
 {
 	//This method is to triangulate points, and swap good matching keypoints & descriptors
+	//For two KeyFrame cases
 
 	//	Quick calcul ation of max and min distances between keypoints
 	std::vector<cv::DMatch> goodMatches;
@@ -116,19 +117,21 @@ void FindGoodMatches(KeyFrame &img1, KeyFrame &img2, std::vector<cv::DMatch> &ma
 			}
 		}
 	}
+	cv::Mat tempdescriptors1(goodMatches.size(), KF1.descriptors.cols, KF1.descriptors.type());
+	cv::Mat tempdescriptors2(goodMatches.size(), KF2.descriptors.cols, KF2.descriptors.type());
+	//std::vector<cv::KeyPoint> tempkeypoints;
+	//std::vector<cv::DMatch> tempMatch;
 
-	cv::Mat tempdescriptors(goodMatches.size(), img2.descriptors.cols, img2.descriptors.type());
-	std::vector<cv::KeyPoint> tempkeypoints;
-	std::vector<cv::DMatch> tempMatch;
 	for (std::size_t i = 0, j = 0; i < goodMatches.size(); ++i)
 	{
 		if (GoodMatchesFlag[i])
 		{
-			
-			img1_goodMatches.push_back(img1.keypoints[goodMatches[i].queryIdx].pt);
-			img2_goodMatches.push_back(img2.keypoints[goodMatches[i].trainIdx].pt);
-			keypoints_3D.push_back(img2.keypoints[goodMatches[i].trainIdx]);
-			img2.descriptors.row(goodMatches[i].trainIdx).copyTo(tempdescriptors.row(j));//save the match points's descriptors
+			KF1GoodMatches.push_back(KF1.keypoints[goodMatches[i].queryIdx].pt);
+			KF2GoodMatches.push_back(KF2.keypoints[goodMatches[i].trainIdx].pt);
+			keypointsMatches[0].push_back(KF1.keypoints[goodMatches[i].queryIdx]);
+			keypointsMatches[1].push_back(KF2.keypoints[goodMatches[i].trainIdx]);
+			KF1.descriptors.row(goodMatches[i].queryIdx).copyTo(tempdescriptors1.row(j));
+			KF2.descriptors.row(goodMatches[i].trainIdx).copyTo(tempdescriptors2.row(j));
 
 			//tempMatch.push_back(goodMatches[i]);
 			//tempkeypoints.push_back(img1.keypoints[goodMatches[i].queryIdx]);
@@ -139,17 +142,75 @@ void FindGoodMatches(KeyFrame &img1, KeyFrame &img2, std::vector<cv::DMatch> &ma
 		}
 	}
 
-	descriptors_3D.create(keypoints_3D.size(), img2.descriptors.cols, img2.descriptors.type());
-	for (std::size_t i = 0; i < keypoints_3D.size(); ++i)
-		tempdescriptors.row(i).copyTo(descriptors_3D.row(i));
+	descriptorsMatches[0].create(keypointsMatches[0].size(), KF1.descriptors.cols, KF1.descriptors.type());
+	descriptorsMatches[1].create(keypointsMatches[1].size(), KF2.descriptors.cols, KF2.descriptors.type());
+	for (std::size_t i = 0; i < keypointsMatches[1].size(); ++i)
+	{
+		tempdescriptors1.row(i).copyTo(descriptorsMatches[0].row(i));
+		tempdescriptors2.row(i).copyTo(descriptorsMatches[1].row(i));
+	}
 #ifdef SHOWTHEIMAGE
-	DebugOpenCVMatchPoint(img1.image, tempkeypoints, img2.image, keypoints_3D, tempMatch, "APoints.jpg");
+	DebugOpenCVMatchPoint(prevKeyFrame.image, tempkeypoints, latestKeyFrame.image, keypoints_3D, tempMatch, "APoints.jpg");
 #endif
 
-	std::vector<cv::KeyPoint>().swap(tempkeypoints);
+	//std::vector<cv::KeyPoint>().swap(tempkeypoints);
 	std::vector<cv::DMatch>().swap(matches);
 	std::vector<cv::DMatch>().swap(goodMatches);
 	std::vector<bool>().swap(GoodMatchesFlag);
+}
+
+void FindGoodMatches(KeyFrame &prevKeyFrame, KeyFrame &latestKeyFrame, std::vector<cv::DMatch> &matches)
+{
+	std::vector<cv::DMatch> goodMatches;
+	double max_dist = 0; double min_dist = 100;
+	for (std::size_t i = 0; i < matches.size(); i++)
+	{
+		double dist = (double)(matches[i].distance);
+		if (dist < min_dist) min_dist = dist;
+		if (dist > max_dist) max_dist = dist;
+	}
+
+	//	Find the good matches
+	min_dist *= 2.0;
+	if (min_dist > 0.2) min_dist = 0.2;
+	for (std::size_t i = 0; i < matches.size(); i++)
+	{
+		double dist = (double)(matches[i].distance);
+		if (dist < min_dist)
+			goodMatches.push_back(matches[i]);
+	}
+
+	//標記一對多的點為false-> goodMatches
+	std::vector<bool> GoodMatchesFlag(goodMatches.size(), true);
+	for (std::size_t j = 0; j < goodMatches.size(); j++)
+	{
+		std::size_t index = j;	//紀錄distance較小的index
+		double distance = goodMatches[index].distance;
+		if (!GoodMatchesFlag[index])
+			continue;
+		for (std::size_t k = j + 1; k < goodMatches.size(); k++)
+		{
+			if (!GoodMatchesFlag[k])
+				continue;
+			if (goodMatches[index].trainIdx == goodMatches[k].trainIdx)
+			{
+				if (distance <= goodMatches[k].distance)
+					GoodMatchesFlag[k] = false;
+				else
+				{
+					GoodMatchesFlag[index] = false;
+					index = k;
+					distance = goodMatches[index].distance;
+				}
+			}
+		}
+	}
+	matches.clear();
+	for (std::size_t i = 0; i < goodMatches.size(); ++i)
+	{
+		if (GoodMatchesFlag[i])
+			matches.push_back(goodMatches[i]);
+	}
 }
 
 /*void FindGoodMatches(Frame &prevImage, Frame &newImage, std::vector<cv::DMatch> &matches, std::vector<int> &good3DMatches, std::vector<cv::Point2f> &newImage_goodMatches)
@@ -273,15 +334,15 @@ void SurfDetection(cv::Mat &image, std::vector<cv::KeyPoint> &keypoints, cv::Mat
 	glutSetWindow(win);
 }
 
-void FlannMatching(cv::Mat &descriptors_featureMap, cv::Mat &descriptors_frame, std::vector<cv::DMatch> &matches)
+void FlannMatching(cv::Mat &descriptors1, cv::Mat &descriptors2, std::vector<cv::DMatch> &matches)
 {
 	int win = glutGetWindow();
 	cv::FlannBasedMatcher matcher;
-	if (descriptors_featureMap.type() != CV_32F)
-		descriptors_featureMap.convertTo(descriptors_featureMap, CV_32F);
-	if (descriptors_frame.type() != CV_32F)
-		descriptors_frame.convertTo(descriptors_frame, CV_32F);
-	matcher.match(descriptors_featureMap, descriptors_frame, matches);
+	if (descriptors1.type() != CV_32F)
+		descriptors1.convertTo(descriptors1, CV_32F);
+	if (descriptors2.type() != CV_32F)
+		descriptors2.convertTo(descriptors2, CV_32F);
+	matcher.match(descriptors1, descriptors2, matches);
 	glutSetWindow(win);
 }
 
@@ -357,7 +418,7 @@ bool FeatureDetectionAndMatching(FeatureMap &featureMap, Frame &prevFrame, Frame
 	std::vector<cv::DMatch> matches;
 	FlannMatching(featureMap.descriptors, currFrame.descriptors, matches);
 	FindGoodMatches(featureMap, currFrame, currFrame.keypoints, matches, featureMapGoodMatches, currFrameGoodMatches);
-	cout << "Surf Good Matches Size : " << currFrameGoodMatches.size() << std::endl;
+	//cout << "Surf Good Matches Size : " << currFrameGoodMatches.size() << std::endl;
 
 	bool usingOpticalFlow = false;
 	//GoodMatches size is not enough
@@ -386,7 +447,7 @@ bool FeatureDetectionAndMatching(FeatureMap &featureMap, Frame &prevFrame, Frame
 	if (usingOpticalFlow)
 	{
 		DeleteOverlap(featureMapGoodMatches, currFrameGoodMatches);
-		cout << "Surf + OpticalFlow Good Matches Size : " << currFrameGoodMatches.size() << std::endl;
+		//cout << "Surf + OpticalFlow Good Matches Size : " << currFrameGoodMatches.size() << std::endl;
 		if ((int)currFrameGoodMatches.size() < 30)
 		{
 			std::vector<cv::DMatch>().swap(matches);
