@@ -14,8 +14,8 @@
 #include "levmar.h"
 #include "debugfunc.h"
 
-std::vector<cv::Point2f> prevFrameinliers; //Point2f vector good keypoints in previous frame
-std::vector<cv::Point2f> prevFeatureMapinliers; //Point2f vector good keypoints in image
+//std::vector<cv::Point2f> prevFrameinliers; //Point2f vector good keypoints in previous frame
+//std::vector<cv::Point2f> prevFeatureMapinliers; //Point2f vector good keypoints in image
 
 /*********************************************************************************************************/
 /* Given rotation axis and rotation angle, find the corresponding rotation matrix                        */
@@ -715,40 +715,30 @@ bool Triangulation(std::vector<KeyFrame> &keyFrames, FeatureMap &featureMap)
 	return true;
 }
 
-bool EstimateCameraTransformation(unsigned long FrameCount, std::vector<KeyFrame> &keyFrames, unsigned char *inputPrevFrame, unsigned char **inputFrame, int frameWidth, int frameHeight, FeatureMap &featureMap, double *cameraPara, double trans[3][4])
+bool EstimateCameraTransformation(unsigned long FrameCount, FeatureMap &featureMap, Frame &currFrame, std::vector<KeyFrame> &keyFrames, double *cameraPara, double trans[3][4], std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
 {
-	//Homography
-	Frame currFrame, prevFrame;
-	currFrame.image = cv::Mat(frameHeight, frameWidth, CV_8UC3, *inputFrame);
-	if (inputPrevFrame != NULL)
-		prevFrame.image = cv::Mat(frameHeight, frameWidth, CV_8UC3, inputPrevFrame);
-	std::vector<cv::Point2f>  featureMap_goodMatches, frame_goodMatches;
-	if (!FeatureDetectionAndMatching(featureMap, prevFrame, currFrame, 3000, featureMap_goodMatches, frame_goodMatches, prevFeatureMapinliers, prevFrameinliers))
-		return false;
+	//Using homography to estimate camera pose
 
+	cv::Mat mask;	//Record the inliers
+	cv::Mat Homo(cv::findHomography(featureMapGoodMatches, currFrameGoodMatches, CV_RANSAC, 3.0, mask));
 	MyMatrix H(3, 3);
-	//cv::Mat mask;
-	cv::Mat mask;
-	cv::Mat Homo(cv::findHomography(featureMap_goodMatches, frame_goodMatches, CV_RANSAC, 3.0, mask));
-
 	for (int i = 0; i < 9; ++i)
 		H.m_lpdEntries[i] = Homo.at<double>(i);
 	
-	std::vector<cv::Point2f> featureMapinliers, frameinliers;
+	std::vector<cv::Point2f> featureMapInliers, frameInliers;
 	for (int i = 0; i < mask.rows; ++i)
 	{
 		if (mask.at<uchar>(i))
 		{
-			featureMapinliers.push_back(featureMap_goodMatches[i]);
-			frameinliers.push_back(frame_goodMatches[i]);
+			featureMapInliers.push_back(featureMapGoodMatches[i]);
+			frameInliers.push_back(currFrameGoodMatches[i]);
 		}
 	}
 
 	MyMatrix R(3, 3);
 	Vector3d t;
-	
 	EstimateCameraPoseFromHomography(H, cameraPara[0], cameraPara[4], cameraPara[1], cameraPara[2], cameraPara[5], R, t);
-	RefineCameraPose(featureMapinliers, frameinliers, frameinliers.size(), cameraPara[0], cameraPara[4], cameraPara[1], cameraPara[2], cameraPara[5], R, t);
+	RefineCameraPose(featureMapInliers, frameInliers, frameInliers.size(), cameraPara[0], cameraPara[4], cameraPara[1], cameraPara[2], cameraPara[5], R, t);
 	//RefineCameraPose(pPoints1, pPoints2, nInliers, cameraPara[0], cameraPara[4], cameraPara[1], cameraPara[2], cameraPara[5], R, t);
 
 	trans[0][0] = R.m_lpdEntries[0];
@@ -767,27 +757,27 @@ bool EstimateCameraTransformation(unsigned long FrameCount, std::vector<KeyFrame
 	if (!keyFrames.size())
 	{
 		//Create first keyframe
-		CreateKeyFrame(FrameCount, currFrame, frameinliers, keyFrames, cameraPara, trans);
+		CreateKeyFrame(FrameCount, currFrame, frameInliers, keyFrames, cameraPara, trans);
 	}
 	else
 	{
 		if (KeyFrameSelection(FrameCount, R, t, keyFrames))
 		{
-			CreateKeyFrame(FrameCount, currFrame, frameinliers, keyFrames, cameraPara, trans);
+			CreateKeyFrame(FrameCount, currFrame, frameInliers, keyFrames, cameraPara, trans);
 			if (!Triangulation(keyFrames[0], keyFrames[1], featureMap));
 				keyFrames.pop_back();
 		}
 	}
 	//	把影像中好的特徵點放入prevFeatureMapinliers  給OpticalFlow計算用
 	//	把場景中好的特徵點放入prevFrameinliers 給OpticalFlow計算用
-	prevFeatureMapinliers.swap(featureMapinliers);
-	prevFrameinliers.swap(frameinliers);
+	prevFeatureMapInliers.swap(featureMapInliers);
+	prevFrameInliers.swap(frameInliers);
 
 	std::vector<cv::KeyPoint>().swap(currFrame.keypoints);
-	std::vector<cv::Point2f> ().swap(featureMap_goodMatches);
-	std::vector<cv::Point2f> ().swap(frame_goodMatches);
-	std::vector<cv::Point2f>().swap(featureMapinliers);
-	std::vector<cv::Point2f>().swap(featureMapinliers);
+	std::vector<cv::Point2f> ().swap(featureMapGoodMatches);
+	std::vector<cv::Point2f> ().swap(currFrameGoodMatches);
+	std::vector<cv::Point2f>().swap(featureMapInliers);
+	std::vector<cv::Point2f>().swap(frameInliers);
 	return true;
 }
  

@@ -30,11 +30,13 @@ double camera_para[9] = { 9.1317151001595698e+002, 0.00000, 3.9695336273339319e+
 
 FeatureMap featureMap;
 std::vector<FeatureMap> featureMaps;
+std::vector<Frame> frameSet;
 cv::VideoWriter writer("GoProTestVideo.avi", CV_FOURCC('M', 'J', 'P', 'G'), 10.0, cv::Size(800, 600));
 
-clock_t t_start,t_end;
+clock_t t_start, t_end;
 
 std::vector<KeyFrame> keyFrames;
+std::vector<cv::Point2f> prevFrameInliers, prevFeatureMapInliers;
 
 void InitOpenGL(void)
 {
@@ -247,9 +249,42 @@ void display(void)
 	
 	double trans[3][4];
 	double gl_para[16];
-	//if (!FeatureDetectionAndMatching())
-	//	return;
-	bool rtn = EstimateCameraTransformation(FrameCount, keyFrames, prevFrame, &frame, winWidth, winHeight, featureMap, camera_para, trans);
+
+	Frame currFrame;
+	currFrame.image = cv::Mat(winHeight, winWidth, CV_8UC3, frame);
+	std::vector<cv::Point2f> currFrameGoodMatches, featureMapGoodMatches;
+	if (FeatureDetectionAndMatching(featureMap, currFrame, frame, prevFrame, 3000, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
+	{
+		if (EstimateCameraTransformation(FrameCount, featureMap, currFrame, keyFrames, camera_para, trans, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
+		{
+			argConvGlpara(trans, gl_para);
+
+			DrawMode3D(camera_para, winWidth, winHeight, true, CAMERA_ORIENTATION_POSITIVE_Z);
+
+			GLdouble projection[16];
+			glGetDoublev(GL_PROJECTION_MATRIX, projection);
+
+			glMatrixMode(GL_MODELVIEW);
+			glLoadMatrixd(gl_para);
+
+			glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
+			//draw_axes(100.0);
+
+			glTranslated(0.0, 0.0, 50.0);
+			glRotated(90.0, 1.0, 0.0, 0.0);
+			glutWireTeapot(100.0);
+			frameSet.push_back(currFrame);
+			//glutWireCube(50.0);
+			//glutSolidSphere(10.0,16,32);
+		}
+	}
+	else if (FeatureDetctionAndMatching(keyFrames, currFrame, 3000))
+	{
+
+	}
+	
+	/*rtn = EstimateCameraTransformation(FrameCount, keyFrames, prevFrame, &frame, winWidth, winHeight, featureMap, camera_para, trans);
 
 	if (rtn == true)
 	{
@@ -294,7 +329,7 @@ void display(void)
 				glutWireCube(100.0);
 			}
 		}
-	}
+	}*/
 	glutSwapBuffers();
 	FrameCount++;
 #ifndef DEBUG
@@ -343,7 +378,7 @@ void main(int argc, char *argv[])
 
 	InitOpenGL();
  	featureMap.image = cv::imread("11647241_636517923150104_1570377205_n.jpg");
-	CreateFeatureMap(featureMap, 5000);
+	CreateFeatureMap(featureMap, 3000);
 
 	t_start = clock();
 

@@ -25,8 +25,8 @@ void FlannMatching(cv::Mat &descriptors_img, cv::Mat &descriptors_scene, std::ve
 void DeleteOverlap(std::vector<cv::Point2f> &img_goodmatches, std::vector<cv::Point2f> &scene_goodmatches);
 void OpticalFlow(cv::Mat &prevFrame, cv::Mat &currFrame, std::vector<cv::Point2f> &prevFrameGoodMatches, std::vector<cv::Point2f> &prevImageGoodMatches, std::vector<cv::Point2f> &featureMapGoodmatches, std::vector<cv::Point2f> &frameGoodmatches);
 void OpticalFlow(FeatureMap &featureMap, std::vector<KeyFrame> &keyFrames, Frame &currFrame, std::vector<cv::Point2f> &currPts, std::vector<int> &good3DMatchesIdx);
-bool FeatureDetectionAndMatching(FeatureMap &featureMap, Frame &prevFrame, Frame &currFrame, unsigned int minHessian, std::vector<cv::Point2f>  &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapGoodMatches, std::vector<cv::Point2f> &prevFrameGoodMatches);
-
+bool FeatureDetectionAndMatching(FeatureMap &featureMap, Frame &currFrame, unsigned char *inputFrame, unsigned char *inputPrevFrame, unsigned int minHessian, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapGoodMatches, std::vector<cv::Point2f> &prevFrameGoodMatches);
+bool FeatureDetctionAndMatching(std::vector<KeyFrame> &keyFrames, Frame &currFrame, unsigned int minHessian);
 //For homography
 void FindGoodMatches(FeatureMap &featureMap, Frame &frame, std::vector<cv::KeyPoint> &keypoints_scene, std::vector<cv::DMatch> &matches, std::vector<cv::Point2f> &featureMapGoodmatches, std::vector<cv::Point2f> &frameGoodmatches);
 //For triangulate points
