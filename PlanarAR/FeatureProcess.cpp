@@ -1,9 +1,10 @@
 #include "FeatureProcess.h"
 
-void FindGoodMatches(FeatureMap &featureMap, Frame &frame, std::vector<cv::KeyPoint> &keypoints_frame, std::vector<cv::DMatch> &matches, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches)
+void FindGoodMatches(FeatureMap &featureMap, cv::Mat &currFrame, std::vector<cv::KeyPoint> &keypoints_frame, std::vector<cv::DMatch> &matches, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches)
 {
 	//This method is to delete the feature points which are multimatch
-	
+	//傳入currFrame做DEBUG用
+
 	std::vector<cv::DMatch> goodMatches;
 	//	Quick calcul ation of max and min distances between keypoints
 	double max_dist = 0; double min_dist = 100;
@@ -410,17 +411,17 @@ void OpticalFlow(cv::Mat &prevFrame, cv::Mat &currFrame, std::vector<cv::Point2f
 	std::vector<float>().swap(error);
 }
 
-bool FeatureDetectionAndMatching(FeatureMap &featureMap, Frame &currFrame, unsigned char *inputFrame, unsigned char *inputPrevFrame, unsigned int minHessian, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
+bool FeatureDetectionAndMatching(FeatureMap &featureMap, Frame &currFrame, cv::Mat &currFrameImg, unsigned char *inputPrevFrame, unsigned int minHessian, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
 {
 	//Camera captures the marker
-	cv::Mat prevFrameImg, currFrameImg;
+	cv::Mat prevFrameImg;
 	if (inputPrevFrame != NULL)
-		prevFrameImg = cv::Mat(currFrame.image.rows, currFrame.image.cols, CV_8UC3, inputPrevFrame);
-	SurfDetection(currFrame.image, currFrame.keypoints, currFrame.descriptors, minHessian);
+		prevFrameImg = cv::Mat(currFrameImg.rows, currFrameImg.cols, CV_8UC3, inputPrevFrame);
+	SurfDetection(currFrameImg, currFrame.keypoints, currFrame.descriptors, minHessian);
 	if (currFrame.keypoints.size() == 0) return false;
 	std::vector<cv::DMatch> matches;
 	FlannMatching(featureMap.descriptors, currFrame.descriptors, matches);
-	FindGoodMatches(featureMap, currFrame, currFrame.keypoints, matches, featureMapGoodMatches, currFrameGoodMatches);
+	FindGoodMatches(featureMap, currFrameImg, currFrame.keypoints, matches, featureMapGoodMatches, currFrameGoodMatches);
 	//cout << "Surf Good Matches Size : " << currFrameGoodMatches.size() << std::endl;
 
 	bool usingOpticalFlow = false;
@@ -430,7 +431,7 @@ bool FeatureDetectionAndMatching(FeatureMap &featureMap, Frame &currFrame, unsig
 		if (prevFrameInliers.size() != 0 && prevFeatureMapInliers.size() != 0 && prevFrameImg.data != NULL)
 		{
 			//Use optical flow to detect feature
-			OpticalFlow(prevFrameImg, currFrame.image, prevFrameInliers, prevFeatureMapInliers, featureMapGoodMatches, currFrameGoodMatches);
+			OpticalFlow(prevFrameImg, currFrameImg, prevFrameInliers, prevFeatureMapInliers, featureMapGoodMatches, currFrameGoodMatches);
 			usingOpticalFlow = true;
 		}
 		else
@@ -465,9 +466,9 @@ bool FeatureDetectionAndMatching(FeatureMap &featureMap, Frame &currFrame, unsig
 	return true;
 }
 
-bool FeatureDetectionAndMatching(std::vector<KeyFrame> &keyFrames, Frame &currFrame, unsigned int minHessian)
+bool FeatureDetectionAndMatching(std::vector<KeyFrame> &keyFrames, Frame &currFrame, cv::Mat &currFrameImg, unsigned int minHessian)
 {
-	SurfDetection(currFrame.image, currFrame.keypoints, currFrame.descriptors, minHessian);
+	SurfDetection(currFrameImg, currFrame.keypoints, currFrame.descriptors, minHessian);
 	if (currFrame.keypoints.size() == 0) return false;
 	std::vector<cv::DMatch> matches;
 }

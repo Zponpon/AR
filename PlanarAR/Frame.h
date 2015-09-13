@@ -11,7 +11,6 @@
 #include "opencv2/calib3d/calib3d.hpp"
 #include "opencv2/nonfree/nonfree.hpp"
 #include "opencv2/video/video.hpp"
-#include "opencv2\stitching\stitcher.hpp"
 #include "Matrix\MyMatrix.h"
 #include "BasicType.h"
 
@@ -20,7 +19,7 @@
 class Frame
 {
 public:
-	void release()
+	/*void release()
 	{
 		image.release();
 		std::vector<cv::KeyPoint>().swap(keypoints);
@@ -32,7 +31,7 @@ public:
 		keypoints = frame.keypoints;
 		frame.descriptors.copyTo(descriptors);
 		return *this;
-	}
+	}*/
 	cv::Mat image;
 	std::vector<cv::KeyPoint> keypoints;	//Record all keypoints in the image
 	cv::Mat descriptors;	//Record all descriptors in the image
@@ -56,6 +55,8 @@ public:
 	cv::Mat descriptors_3D;
 	unsigned long index;
 };
+
+void CreateKeyFrame(unsigned long index, Frame &currFrame, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames, double *cameraPara);
 
 bool KeyFrameSelection(unsigned long index, MyMatrix &R, Vector3d t, std::vector<KeyFrame> &keyFrames);
 #endif

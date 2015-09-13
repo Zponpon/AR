@@ -1,5 +1,18 @@
 #include "Frame.h"
 
+void CreateKeyFrame(unsigned long index, Frame &currFrame, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames, double *cameraPara)
+{
+	KeyFrame keyFrame;
+	currFrameImg.copyTo(keyFrame.image);
+	currFrame.keypoints.swap(keyFrame.keypoints);
+	currFrame.descriptors.copyTo(keyFrame.descriptors);
+	keyFrame.R.CreateMatrix(3, 3);
+	keyFrame.R = currFrame.R;
+	keyFrame.t = currFrame.t;
+	keyFrame.index = index;
+	keyFrames.push_back(keyFrame);
+}
+
 //std::vector<MyMatrix> projMatrixSet;
 double calcDistance(Vector3d &t1, Vector3d &t2)
 {

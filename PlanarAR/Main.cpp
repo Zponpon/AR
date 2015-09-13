@@ -30,7 +30,7 @@ double camera_para[9] = { 9.1317151001595698e+002, 0.00000, 3.9695336273339319e+
 
 FeatureMap featureMap;
 std::vector<FeatureMap> featureMaps;
-std::vector<Frame> frameSet;
+std::vector<Frame> frames;
 cv::VideoWriter writer("GoProTestVideo.avi", CV_FOURCC('M', 'J', 'P', 'G'), 10.0, cv::Size(800, 600));
 
 clock_t t_start, t_end;
@@ -198,6 +198,22 @@ void draw_axes(double size)
 	else glEnable(GL_COLOR_MATERIAL);
 }
 
+void displaySetting(double *gl_para)
+{
+	//argConvGlpara(trans, gl_para);
+	GLfloat   light_position[] = { 100.0, -200.0, 200.0, 0.0 };
+	GLdouble projection[16];
+	glGetDoublev(GL_PROJECTION_MATRIX, projection);
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadMatrixd(gl_para);
+
+	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
+	glTranslated(0.0, 0.0, 50.0);
+	glRotated(90.0, 1.0, 0.0, 0.0);
+	glutWireTeapot(100.0);
+}
 void display(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -208,34 +224,18 @@ void display(void)
 	glDisable(GL_DEPTH_TEST);
 	DrawMode2D(winWidth,winHeight);
 
-#ifndef DEBUG
 	if (FrameCount > 0)	//因為第二張frame開始才需要記錄前一張frame
 	{
 		prevFrame = frame;
 		frame = new unsigned char[VI.getSize(dev)];
 	}
-#endif
-
 	if( VI.isFrameNew(dev))	
 	{
 		VI.getPixels(dev, frame, true, true);
-
 		//For video
-		/*prevFrame = new unsigned char[VI.getSize(dev)];
-		WriteVideo(writer, frame, FrameCount);*/
-#ifdef DEBUG
-		if (FrameCount == 0)
-		{
-			DebugLoadImage("img1.raw", frame, winWidth, winHeight, 3);
-			prevFrame = frame;
-		}
-		else if (FrameCount == 1)
-		{
-			frame = new unsigned char[VI.getSize(dev)];
-			DebugLoadImage("img2.raw", frame, winWidth, winHeight, 3);
-		}
-		else 
-			DebugLoadImage("img2.raw", frame, winWidth, winHeight, 3);
+#ifdef WRITEVIDEO
+		prevFrame = new unsigned char[VI.getSize(dev)];
+		WriteVideo(writer, frame, FrameCount);
 #endif
 		DisplayFlipImage(frame);
 	}
@@ -245,97 +245,52 @@ void display(void)
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
 
-	GLfloat   light_position[]  = {100.0,-200.0,200.0,0.0};
+	//GLfloat   light_position[]  = {100.0,-200.0,200.0,0.0};
 	
 	double trans[3][4];
 	double gl_para[16];
 
+	bool triangulate = false;
 	Frame currFrame;
-	currFrame.image = cv::Mat(winHeight, winWidth, CV_8UC3, frame);
+	cv::Mat currFrameImg = cv::Mat(winHeight, winWidth, CV_8UC3, frame);
 	std::vector<cv::Point2f> currFrameGoodMatches, featureMapGoodMatches;
-	if (FeatureDetectionAndMatching(featureMap, currFrame, frame, prevFrame, 3000, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
+	
+	if (FeatureDetectionAndMatching(featureMap, currFrame, currFrameImg, prevFrame, 3000, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
 	{
-		if (EstimateCameraTransformation(FrameCount, featureMap, currFrame, keyFrames, camera_para, trans, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
+		if (EstimateCameraTransformation(FrameCount, featureMap, currFrame, currFrameImg, keyFrames, camera_para, trans, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
 		{
 			argConvGlpara(trans, gl_para);
-
 			DrawMode3D(camera_para, winWidth, winHeight, true, CAMERA_ORIENTATION_POSITIVE_Z);
+			displaySetting(gl_para);
 
-			GLdouble projection[16];
-			glGetDoublev(GL_PROJECTION_MATRIX, projection);
-
-			glMatrixMode(GL_MODELVIEW);
-			glLoadMatrixd(gl_para);
-
-			glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-
-			//draw_axes(100.0);
-
-			glTranslated(0.0, 0.0, 50.0);
-			glRotated(90.0, 1.0, 0.0, 0.0);
-			glutWireTeapot(100.0);
-			frameSet.push_back(currFrame);
-			//glutWireCube(50.0);
-			//glutSolidSphere(10.0,16,32);
-		}
-	}
-	else if (FeatureDetctionAndMatching(keyFrames, currFrame, 3000))
-	{
-
-	}
-	
-	/*rtn = EstimateCameraTransformation(FrameCount, keyFrames, prevFrame, &frame, winWidth, winHeight, featureMap, camera_para, trans);
-
-	if (rtn == true)
-	{
-		argConvGlpara(trans, gl_para);
-
-		DrawMode3D(camera_para, winWidth, winHeight, true, CAMERA_ORIENTATION_POSITIVE_Z);
-
-		GLdouble projection[16];
-		glGetDoublev(GL_PROJECTION_MATRIX, projection);
-
-		glMatrixMode(GL_MODELVIEW);
-		glLoadMatrixd(gl_para);
-
-		glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-
-		//draw_axes(100.0);
-
-		glTranslated(0.0, 0.0, 50.0);
-		glRotated(90.0, 1.0, 0.0, 0.0);
-		glutWireTeapot(100.0);
-		//glutWireCube(50.0);
-		//glutSolidSphere(10.0,16,32);
-	}
-	else
-	{
-		if (keyFrames.size() != 0)
-		{
-			if (EstimateCameraTransformation(FrameCount, featureMap, keyFrames, frame, winWidth, winHeight, camera_para, trans))
+			currFrame.timeStamp = clock() / CLOCKS_PER_SEC;
+			frames.push_back(currFrame);
+			if (keyFrames.size() == 0)
+				CreateKeyFrame(FrameCount, currFrame, currFrameImg, keyFrames, camera_para);
+			else if (KeyFrameSelection(FrameCount, currFrame.R, currFrame.t, keyFrames))
 			{
-				argConvGlpara(trans, gl_para);
-
-				DrawMode3D(camera_para, winWidth, winHeight, true, CAMERA_ORIENTATION_POSITIVE_Z);
-
-				GLdouble projection[16];
-				glGetDoublev(GL_PROJECTION_MATRIX, projection);
-
-				glMatrixMode(GL_MODELVIEW);
-				glLoadMatrixd(gl_para);
-
-				glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-				glTranslated(400.0, 300.0, 50.0);
-				glutWireCube(100.0);
+				CreateKeyFrame(FrameCount, currFrame, currFrameImg, keyFrames, camera_para);
+				triangulate = true;
 			}
 		}
-	}*/
+	}
+	else if (FeatureDetectionAndMatching(keyFrames, currFrame, currFrameImg, 3000))
+	{
+		//SolvePnP Process
+		//if (EstimateCameraTransformation)
+		glutWireCube(50.0);
+		currFrame.timeStamp = clock() / CLOCKS_PER_SEC;
+		frames.push_back(currFrame);
+	}
+	if (triangulate)
+	{
+		//do triangulation process
+	}
+
 	glutSwapBuffers();
 	FrameCount++;
-#ifndef DEBUG
 	if (prevFrame!=NULL)
 		delete[]prevFrame;//刪除前一次的記憶體位址
-#endif
 }
 
 void KeyboardFunc(unsigned char key, int x, int y)
@@ -377,7 +332,9 @@ void main(int argc, char *argv[])
 	glutKeyboardFunc(KeyboardFunc);
 
 	InitOpenGL();
+
  	featureMap.image = cv::imread("11647241_636517923150104_1570377205_n.jpg");
+	featureMaps.push_back(featureMap);
 	CreateFeatureMap(featureMap, 3000);
 
 	t_start = clock();
