@@ -9,6 +9,7 @@
 #include "FeatureProcess.h"
 #include "DebugFunc.h"
 #include "Video.h"
+#include "SFMUtil.h"
 /*#include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/opencv.hpp"*/
@@ -25,8 +26,8 @@ int winWidth=800, winHeight=600;
 unsigned char *pbImage;
 unsigned long FrameCount = 0;
 unsigned char *prevFrame = NULL;
-//double camera_para[9] = { 738.41709, 0.00000, 378.50000, 0.00000, 733.88828, 341.50000, 0.00000, 0.00000, 1.00000 };
-double camera_para[9] = { 9.1317151001595698e+002, 0.00000, 3.9695336273339319e+002, 0.00000, 9.1335671139215276e+002, 2.9879860363446750e+002, 0.00000, 0.00000, 1.00000 };
+//double cameraPara[9] = { 738.41709, 0.00000, 378.50000, 0.00000, 733.88828, 341.50000, 0.00000, 0.00000, 1.00000 };
+double cameraPara[9] = { 9.1317151001595698e+002, 0.00000, 3.9695336273339319e+002, 0.00000, 9.1335671139215276e+002, 2.9879860363446750e+002, 0.00000, 0.00000, 1.00000 };
 
 FeatureMap featureMap;
 std::vector<FeatureMap> featureMaps;
@@ -58,7 +59,7 @@ void DrawMode2D(int winWidth, int winHeight)
 	glViewport(0, 0, winWidth, winHeight);
 }
 
-void DrawMode3D(double camera_para[9], int winWidth, int winHeight, bool flipImage, int orientation)
+void DrawMode3D(double cameraPara[9], int winWidth, int winHeight, bool flipImage, int orientation)
 {
 	double invK[9];
 	double left,right,bottom,top;
@@ -70,13 +71,13 @@ void DrawMode3D(double camera_para[9], int winWidth, int winHeight, bool flipIma
 	glLoadIdentity();
 
 	// Compute the inverse of camera intrinsic matrix
-	invK[0] = 1.0/camera_para[0];
-	invK[1] = -camera_para[1]/(camera_para[0]*camera_para[4]);
-	invK[2] = (camera_para[1]*camera_para[5]-camera_para[4]*camera_para[2])/(camera_para[0]*camera_para[4]*camera_para[8]);
-	invK[4] = 1.0/camera_para[4];
-	invK[5] = -camera_para[5]/(camera_para[4]*camera_para[8]);
+	invK[0] = 1.0/cameraPara[0];
+	invK[1] = -cameraPara[1]/(cameraPara[0]*cameraPara[4]);
+	invK[2] = (cameraPara[1]*cameraPara[5]-cameraPara[4]*cameraPara[2])/(cameraPara[0]*cameraPara[4]*cameraPara[8]);
+	invK[4] = 1.0/cameraPara[4];
+	invK[5] = -cameraPara[5]/(cameraPara[4]*cameraPara[8]);
 	invK[3] = invK[6] = invK[7] = 0.0;
-	invK[8] = 1.0/camera_para[8];
+	invK[8] = 1.0/cameraPara[8];
 
 	// [u v w]' = invK*[0 0 1]'
 	u = invK[2]; v=invK[5]; w=invK[8]; 
@@ -257,34 +258,45 @@ void display(void)
 	
 	if (FeatureDetectionAndMatching(featureMap, currFrame, currFrameImg, prevFrame, 3000, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
 	{
-		if (EstimateCameraTransformation(FrameCount, featureMap, currFrame, currFrameImg, keyFrames, camera_para, trans, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
+		if (EstimateCameraTransformation(FrameCount, cameraPara, trans, featureMap, currFrame, currFrameImg, keyFrames, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
 		{
 			argConvGlpara(trans, gl_para);
-			DrawMode3D(camera_para, winWidth, winHeight, true, CAMERA_ORIENTATION_POSITIVE_Z);
+			DrawMode3D(cameraPara, winWidth, winHeight, true, CAMERA_ORIENTATION_POSITIVE_Z);
 			displaySetting(gl_para);
 
 			currFrame.timeStamp = clock() / CLOCKS_PER_SEC;
 			frames.push_back(currFrame);
 			if (keyFrames.size() == 0)
-				CreateKeyFrame(FrameCount, currFrame, currFrameImg, keyFrames, camera_para);
+				CreateKeyFrame(FrameCount, currFrame, currFrameImg, keyFrames, cameraPara);
 			else if (KeyFrameSelection(FrameCount, currFrame.R, currFrame.t, keyFrames))
 			{
-				CreateKeyFrame(FrameCount, currFrame, currFrameImg, keyFrames, camera_para);
+				CreateKeyFrame(FrameCount, currFrame, currFrameImg, keyFrames, cameraPara);
 				triangulate = true;
 			}
 		}
 	}
-	else if (FeatureDetectionAndMatching(keyFrames, currFrame, currFrameImg, 3000))
+	else
 	{
 		//SolvePnP Process
 		//if (EstimateCameraTransformation)
-		glutWireCube(50.0);
-		currFrame.timeStamp = clock() / CLOCKS_PER_SEC;
-		frames.push_back(currFrame);
+		std::vector<cv::DMatch> goodMatchesSet;
+		if (FeatureDetectionAndMatching(cameraPara, keyFrames, currFrame, currFrameImg, 3000, goodMatchesSet))
+		{
+			//if (EstimateCameraTransformation)
+			glutWireCube(50.0);
+			currFrame.timeStamp = clock() / CLOCKS_PER_SEC;
+			frames.push_back(currFrame);
+		}
+		else return;
 	}
 	if (triangulate)
 	{
-		//do triangulation process
+		if (keyFrames.size() == 2)
+			Triangulation(keyFrames[0], keyFrames[1], cameraPara);
+		else if (keyFrames.size() > 2)
+		{
+
+		}
 	}
 
 	glutSwapBuffers();

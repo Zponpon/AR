@@ -515,8 +515,25 @@ double EstimateFocalLength(MyMatrix &F, double u0, double v0, double u1, double 
 	return sqrt(-f1.m_lpdEntries[0] / f2.m_lpdEntries[0]);
 }
 
+void CreateProjMatrix(MyMatrix &K, const MyMatrix &R, const Vector3d &t, MyMatrix &projMatrix)
+{
+	projMatrix.m_lpdEntries[0]	= R.m_lpdEntries[0];
+	projMatrix.m_lpdEntries[1]	= R.m_lpdEntries[1];
+	projMatrix.m_lpdEntries[2]	= R.m_lpdEntries[2];
+	projMatrix.m_lpdEntries[3]	= t.x;
+	projMatrix.m_lpdEntries[4]	= R.m_lpdEntries[3];
+	projMatrix.m_lpdEntries[5]	= R.m_lpdEntries[4];
+	projMatrix.m_lpdEntries[6]	= R.m_lpdEntries[5];
+	projMatrix.m_lpdEntries[7]	= t.y;
+	projMatrix.m_lpdEntries[8]	= R.m_lpdEntries[6];
+	projMatrix.m_lpdEntries[9]	= R.m_lpdEntries[7];
+	projMatrix.m_lpdEntries[10] = R.m_lpdEntries[8];
+	projMatrix.m_lpdEntries[11] = t.z;
 
-bool Triangulation(KeyFrame &KF1, KeyFrame &KF2, FeatureMap &featureMap)
+	projMatrix = K * projMatrix;
+}
+
+void Triangulation(KeyFrame &KF1, KeyFrame &KF2, double *cameraPara)
 {
 	//For two case
 	std::vector<cv::DMatch> matches;
@@ -525,21 +542,21 @@ bool Triangulation(KeyFrame &KF1, KeyFrame &KF2, FeatureMap &featureMap)
 	std::vector<cv::Point3f> pts3D;
 	std::vector<cv::KeyPoint> keypointsMatches[2];
 	cv::Mat descriptorsMatches[2];
-	if (KF1.keypoints.size() == 0 || KF1.descriptors.rows == 0)
-		SurfDetection(KF1.image, KF1.keypoints, KF1.descriptors, 3000);
-	if (KF2.keypoints.size() == 0 || KF2.descriptors.rows == 0)
-		SurfDetection(KF2.image, KF2.keypoints, KF2.descriptors, 3000);
 	FlannMatching(KF1.descriptors, KF2.descriptors, matches);
 	FindGoodMatches(KF1, KF2, matches, KF1GoodMatches, KF2GoodMatches, keypointsMatches, descriptorsMatches);
 	if (KF1GoodMatches.size() == 0)
-	{
-		std::vector<cv::Point2f>().swap(KF1GoodMatches);
-		std::vector<cv::Point2f>().swap(KF2GoodMatches);
-		return false;
-	}
+		return;
+
+	/*MyMatrix K(3, 3);
+	MyMatrix projMatrix1(3, 4), projMatrix2(3, 4);
+	for (int i = 0; i < 9; ++i)
+		K.m_lpdEntries[i] = cameraPara[i];
+	CreateProjMatrix(K, KF1.R, KF1.t, projMatrix1);
+	CreateProjMatrix(K, KF2.R, KF2.t, projMatrix2);*/
+
 	for (int i = 0; i < KF1GoodMatches.size(); ++i)
 	{
-		//Triangulation
+		//Triangulate
 		cv::Point3f pt3D;
 		if (Find3DCoordinates(KF1.projMatrix, KF2.projMatrix,
 			KF1GoodMatches[i], KF2GoodMatches[i], pt3D))
@@ -552,37 +569,38 @@ bool Triangulation(KeyFrame &KF1, KeyFrame &KF2, FeatureMap &featureMap)
 	{
 		if ((pts3D[i].x > 400.0f || pts3D[i].x < -400.0f
 			|| pts3D[i].y > 300.0f || pts3D[i].y < -300.0f))
-			featureMap.feature3D.push_back(pts3D[i]);
+		{
+			KF1.r3dPts.push_back(pts3D[i]);
+			KF2.r3dPts.push_back(pts3D[i]);
+		}
 		else
 			goodPts3DIdx[i] = -1;
 	}
+	//initialize
 	if (KF1.descriptors_3D.rows != 0 || KF1.descriptors_3D.cols != 0)
-		KF1.descriptors_3D.create(featureMap.feature3D.size(), descriptorsMatches[0].cols, descriptorsMatches[0].type());
+		KF1.descriptors_3D.create(KF1.r3dPts.size(), descriptorsMatches[0].cols, descriptorsMatches[0].type());
 	if (KF2.descriptors_3D.rows != 0 || KF2.descriptors_3D.cols != 0)
-		KF2.descriptors_3D.create(featureMap.feature3D.size(), descriptorsMatches[1].cols, descriptorsMatches[1].type());
+		KF2.descriptors_3D.create(KF2.r3dPts.size(), descriptorsMatches[1].cols, descriptorsMatches[1].type());
 	for (std::size_t i = 0, j = 0; i < goodPts3DIdx.size(); ++i)
 	{
 		if (goodPts3DIdx[i] != -1)
 		{
 			KF1.keypoints_3D.push_back(keypointsMatches[0][goodPts3DIdx[i]]);
 			KF2.keypoints_3D.push_back(keypointsMatches[1][goodPts3DIdx[i]]);
-			featureMap.reProjPts.push_back(keypointsMatches[1][goodPts3DIdx[i]]);
-			//descriptorsMatches[0].row(goodPts3DIdx[i]).copyTo(KF1.descriptors_3D.row(j));
-			//descriptorsMatches[1].row(goodPts3DIdx[i]).copyTo(KF2.descriptors_3D.row(j));
+			descriptorsMatches[0].row(goodPts3DIdx[i]).copyTo(KF1.descriptors_3D.row(j));
+			descriptorsMatches[1].row(goodPts3DIdx[i]).copyTo(KF2.descriptors_3D.row(j));
 			++j;
 		}
 	}
 
-	/*vector<int>().swap(goodPts3DIdx);
+	std::vector<int>().swap(goodPts3DIdx);
+	std::vector<cv::KeyPoint>().swap(keypointsMatches[0]);
+	std::vector<cv::KeyPoint>().swap(keypointsMatches[1]);
 	std::vector<cv::DMatch>  ().swap(matches);
-	std::vector<cv::KeyPoint>().swap(keypoints_3D);
 	std::vector<cv::Point3f> ().swap(pts3D);
-	std::vector<cv::Point2f>().swap(prevKeyFrameGoodMatches);
-	std::vector<cv::Point2f>().swap(latestKeyFrameGoodMatches);*/
-	return true;
 }
 
-bool Triangulation(std::vector<KeyFrame> &keyFrames, FeatureMap &featureMap)
+void Triangulation(std::vector<KeyFrame> &keyFrames)
 {
 	//For multiple cases
 	std::vector<MyMatrix> Ps;
@@ -594,7 +612,7 @@ bool Triangulation(std::vector<KeyFrame> &keyFrames, FeatureMap &featureMap)
 		std::vector<cv::KeyPoint> keypointsMatches[3];
 		cv::Mat descriptorsMatches[3];
 		FlannMatching(keyFrames[i].descriptors, keyFrames[2].descriptors, goodMatches[i]);
-		FindGoodMatches(keyFrames[i], keyFrames[1], goodMatches[i]);
+		//FindGoodMatches(keyFrames[i], keyFrames[1], goodMatches[i]);
 		Ps.push_back(keyFrames[i].projMatrix);
 	}
 	Ps.push_back(keyFrames[keyFrames.size() - 1].projMatrix);
@@ -625,5 +643,5 @@ bool Triangulation(std::vector<KeyFrame> &keyFrames, FeatureMap &featureMap)
 			it++;
 		}
 	}
-	return true;
+	//return true;
 }

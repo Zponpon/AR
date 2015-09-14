@@ -19,24 +19,10 @@
 class Frame
 {
 public:
-	/*void release()
-	{
-		image.release();
-		std::vector<cv::KeyPoint>().swap(keypoints);
-		descriptors.release();
-	}
-	Frame& operator= (Frame &frame)
-	{
-		frame.image.copyTo(image);
-		keypoints = frame.keypoints;
-		frame.descriptors.copyTo(descriptors);
-		return *this;
-	}*/
-	cv::Mat image;
 	std::vector<cv::KeyPoint> keypoints;	//Record all keypoints in the image
 	cv::Mat descriptors;	//Record all descriptors in the image
 	clock_t timeStamp;
-	bool state;
+	bool state; //不一定需要
 	MyMatrix R;
 	Vector3d t;
 };
@@ -47,16 +33,19 @@ public:
 	cv::Mat image;
 	std::vector<cv::KeyPoint> keypoints;
 	cv::Mat descriptors;
-	MyMatrix projMatrix;
+	MyMatrix projMatrix;//不一定需要
 	MyMatrix R;
 	Vector3d t;
 
 	std::vector<cv::KeyPoint> keypoints_3D;
 	cv::Mat descriptors_3D;
+	std::vector<cv::Point3f> r3dPts;
 	unsigned long index;
 };
 
 void CreateKeyFrame(unsigned long index, Frame &currFrame, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames, double *cameraPara);
+
+void FindGoodKeyFrames(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame &currFrame, std::vector<int> &goodKeyFrameIdx);
 
 bool KeyFrameSelection(unsigned long index, MyMatrix &R, Vector3d t, std::vector<KeyFrame> &keyFrames);
 #endif

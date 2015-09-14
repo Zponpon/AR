@@ -21,16 +21,16 @@ public:
 	cv::Mat image;
 	std::vector<cv::KeyPoint> keypoints;
 	cv::Mat descriptors;
-	std::vector<cv::KeyPoint> reProjPts;//不要的
+//	std::vector<cv::KeyPoint> reProjPts;//不要的
 	std::vector<cv::Point3f> feature3D; 		//不要的															
 };
 void CreateFeatureMap(FeatureMap &featureMap, int minHessian);
 //void Triangulation(std::vector<KeyFrame> &keyFrames, FeatureMap &featureMap, double *cameraPara);
 
 //For homography
-bool EstimateCameraTransformation(unsigned long FrameCount, FeatureMap &featureMap, Frame &currFrame, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames, double *cameraPara, double trans[3][4], std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers);
+bool EstimateCameraTransformation(unsigned long FrameCount, double *cameraPara, double trans[3][4], FeatureMap &featureMap, Frame &currFrame, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers);
 //bool EstimateCameraTransformation(unsigned long FrameCount, std::vector<KeyFrame> &keyFrames, unsigned char *inputprevFrame, unsigned char **inputFrame, int frameWidth, int frameHeight, FeatureMap &featureMap, double *cameraPara, double trans[3][4]);
 //For Visual odometry
-bool EstimateCameraTransformation(unsigned long FrameCount, FeatureMap &featureMap, std::vector<KeyFrame> &keyFrames, unsigned char *inputFrame, int frameWidth, int frameHeight, double *cameraPara, double trans[3][4]);
+bool EstimateCameraTransformation(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame &currFrame, cv::Mat &currFrameImg, std::vector<cv::DMatch> &goodMatchesSet);
 
 #endif
