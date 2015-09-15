@@ -160,6 +160,57 @@ void FindGoodMatches(KeyFrame &KF1, KeyFrame &KF2, std::vector<cv::DMatch> &matc
 	std::vector<bool>().swap(GoodMatchesFlag);
 }
 
+void FindGoodMatches(std::vector<cv::DMatch> &matches, std::vector<cv::DMatch> &goodMatches)
+{
+	//For solvePnPRansac
+	double max_dist = 0; double min_dist = 100;
+	for (std::size_t i = 0; i < matches.size(); i++)
+	{
+		double dist = (double)(matches[i].distance);
+		if (dist < min_dist) min_dist = dist;
+		if (dist > max_dist) max_dist = dist;
+	}
+	min_dist *= 2.0;
+	if (min_dist > 0.2) min_dist = 0.2;
+	for (std::size_t i = 0; i < matches.size(); i++)
+	{
+		double dist = (double)(matches[i].distance);
+		if (dist < min_dist)
+			goodMatches.push_back(matches[i]);
+	}
+	std::vector<bool> GoodMatchesFlag(goodMatches.size(), true);
+	for (std::size_t j = 0; j < goodMatches.size(); j++)
+	{
+		std::size_t index = j;	//¬ö¿ýdistance¸û¤pªºindex
+		double distance = goodMatches[index].distance;
+		if (!GoodMatchesFlag[index])
+			continue;
+		for (std::size_t k = j + 1; k < goodMatches.size(); k++)
+		{
+			if (!GoodMatchesFlag[k])
+				continue;
+			if (goodMatches[index].trainIdx == goodMatches[k].trainIdx)
+			{
+				if (distance <= goodMatches[k].distance)
+					GoodMatchesFlag[k] = false;
+				else
+				{
+					GoodMatchesFlag[index] = false;
+					index = k;
+					distance = goodMatches[index].distance;
+				}
+			}
+		}
+	}
+	std::vector<cv::DMatch> temp;
+	for (int i = 0; i < GoodMatchesFlag.size(); ++i)
+	{
+		if (GoodMatchesFlag[i])
+			temp.push_back(goodMatches[i]);
+	}
+	goodMatches.swap(temp);
+}
+
 void FindGoodMatches(KeyFrame &prevKeyFrame, KeyFrame &latestKeyFrame, std::vector<cv::DMatch> &matches)
 {
 	std::vector<cv::DMatch> goodMatches;
@@ -282,33 +333,6 @@ void FlannMatching(cv::Mat &descriptors1, cv::Mat &descriptors2, std::vector<cv:
 	glutSetWindow(win);
 }
 
-/*void OpticalFlow(FeatureMap &featureMap, std::vector<KeyFrame> &keyFrames, Frame &currFrame, std::vector<cv::Point2f> &currPts, std::vector<int> &good3DMatchesIdx)
-{
-	std::vector<cv::Point2f> prevPts;
-	std::vector<cv::Point2f> opticalflowPts;
-	cv::KeyPoint::convert(keyFrames[keyFrames.size() - 1].keypoints_3D, prevPts);
-	std::vector<cv::Point2f> reProjPts;
-	cv::KeyPoint::convert(featureMap.reProjPts, reProjPts);
-	std::vector<uchar> status;
-	std::vector<float> error;
-	cv::calcOpticalFlowPyrLK(keyFrames[keyFrames.size() - 1].image, currFrame.image, reProjPts, opticalflowPts, status, error);
-
-	for (int i = 0; i < opticalflowPts.size(); ++i)
-	{
-		//norm is ...
-		if (status[i] == 1 || (cv::norm(opticalflowPts[i] - reProjPts[i]) > 5))
-		{
-			currPts.push_back(opticalflowPts[i]);
-			good3DMatchesIdx.push_back(i);
-		}
-	}
-	std::vector<cv::Point2f>().swap(reProjPts);
-	std::vector<cv::Point2f>().swap(prevPts);
-	std::vector<cv::Point2f>().swap(opticalflowPts);
-	std::vector<uchar>().swap(status);
-	std::vector<float>().swap(error);
-}*/
-
 void OpticalFlow(cv::Mat &prevFrame, cv::Mat &currFrame, std::vector<cv::Point2f> &prevFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapGoodMatches, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches)
 {
 	//For PoseEsitmation by homography
@@ -401,25 +425,19 @@ bool FeatureDetectionAndMatching(FeatureMap &featureMap, Frame &currFrame, cv::M
 	return true;
 }
 
-bool FeatureDetectionAndMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame &currFrame, cv::Mat &currFrameImg, unsigned int minHessian, std::vector<cv::DMatch> &goodMatchesSet)
+bool FeatureDetectionAndMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame &currFrame, cv::Mat &currFrameImg, unsigned int minHessian, std::vector<int> &goodKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
 {
 	//For SolvePnPRansac
 	if (keyFrames.size() < 2)	return false;
 	SurfDetection(currFrameImg, currFrame.keypoints, currFrame.descriptors, minHessian);
 	if (currFrame.keypoints.size() == 0)	return false;
 	std::vector<cv::DMatch> matches;
-	std::vector<int> goodKeyFrameIdx;
 	FindGoodKeyFrames(cameraPara, keyFrames, currFrame, goodKeyFrameIdx);
-	std::vector<KeyFrame> goodKeyFrames;
+	goodMatchesSet.resize(goodKeyFrameIdx.size());
 	for (std::size_t i = 0; i < goodKeyFrameIdx.size(); ++i)
-		goodKeyFrames.push_back(keyFrames[goodKeyFrameIdx[i]]);
-	goodMatchesSet.resize(goodKeyFrames.size());
-	//std::vector<cv::DMatch> goodMatches;
-	//goodMatches.resize(goodKeyFrames.size());
-	/*for (std::size_t i = 0; i < goodKeyFrames.size(); ++i)
 	{
 		std::vector<cv::DMatch> matches;
-		FlannMatching(goodKeyFrames[i].descriptors_3D, currFrame.descriptors, matches);
-		FindGoodMatches(matches, goodMatchesSet);
-	}*/
+		FlannMatching(keyFrames[goodKeyFrameIdx[i]].descriptors_3D, currFrame.descriptors, matches);
+		FindGoodMatches(matches, goodMatchesSet[i]);
+	}
 }

@@ -199,9 +199,11 @@ void draw_axes(double size)
 	else glEnable(GL_COLOR_MATERIAL);
 }
 
-void displaySetting(double *gl_para)
+void displaySetting(double trans[3][4], double *gl_para)
 {
 	//argConvGlpara(trans, gl_para);
+	argConvGlpara(trans, gl_para);
+	DrawMode3D(cameraPara, winWidth, winHeight, true, CAMERA_ORIENTATION_POSITIVE_Z);
 	GLfloat   light_position[] = { 100.0, -200.0, 200.0, 0.0 };
 	GLdouble projection[16];
 	glGetDoublev(GL_PROJECTION_MATRIX, projection);
@@ -213,7 +215,6 @@ void displaySetting(double *gl_para)
 
 	glTranslated(0.0, 0.0, 50.0);
 	glRotated(90.0, 1.0, 0.0, 0.0);
-	glutWireTeapot(100.0);
 }
 void display(void)
 {
@@ -255,17 +256,19 @@ void display(void)
 	Frame currFrame;
 	cv::Mat currFrameImg = cv::Mat(winHeight, winWidth, CV_8UC3, frame);
 	std::vector<cv::Point2f> currFrameGoodMatches, featureMapGoodMatches;
-	
+
 	if (FeatureDetectionAndMatching(featureMap, currFrame, currFrameImg, prevFrame, 3000, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
 	{
 		if (EstimateCameraTransformation(FrameCount, cameraPara, trans, featureMap, currFrame, currFrameImg, keyFrames, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
 		{
-			argConvGlpara(trans, gl_para);
-			DrawMode3D(cameraPara, winWidth, winHeight, true, CAMERA_ORIENTATION_POSITIVE_Z);
-			displaySetting(gl_para);
+			//argConvGlpara(trans, gl_para);
+			//DrawMode3D(cameraPara, winWidth, winHeight, true, CAMERA_ORIENTATION_POSITIVE_Z);
 
-			currFrame.timeStamp = clock() / CLOCKS_PER_SEC;
+			displaySetting(trans, gl_para);
+			glutWireTeapot(100.0);
+
 			frames.push_back(currFrame);
+
 			if (keyFrames.size() == 0)
 				CreateKeyFrame(FrameCount, currFrame, currFrameImg, keyFrames, cameraPara);
 			else if (KeyFrameSelection(FrameCount, currFrame.R, currFrame.t, keyFrames))
@@ -274,18 +277,30 @@ void display(void)
 				triangulate = true;
 			}
 		}
+		std::vector<cv::Point2f>().swap(currFrameGoodMatches);
+		std::vector<cv::Point2f>().swap(featureMapGoodMatches);
 	}
 	else
 	{
-		//SolvePnP Process
-		//if (EstimateCameraTransformation)
-		std::vector<cv::DMatch> goodMatchesSet;
-		if (FeatureDetectionAndMatching(cameraPara, keyFrames, currFrame, currFrameImg, 3000, goodMatchesSet))
+		std::vector<int> goodKeyFrameIdx;
+		std::vector< std::vector<cv::DMatch> > goodMatchesSet;
+		if (FeatureDetectionAndMatching(cameraPara, keyFrames, currFrame, currFrameImg, 3000, goodKeyFrameIdx, goodMatchesSet))
 		{
-			//if (EstimateCameraTransformation)
-			glutWireCube(50.0);
-			currFrame.timeStamp = clock() / CLOCKS_PER_SEC;
-			frames.push_back(currFrame);
+			if (EstimateCameraTransformation(cameraPara, trans, keyFrames, currFrame, currFrameImg, goodKeyFrameIdx, goodMatchesSet))
+			{
+				//argConvGlpara(trans, gl_para);
+				//DrawMode3D(cameraPara, winWidth, winHeight, true, CAMERA_ORIENTATION_POSITIVE_Z);
+
+				displaySetting(trans, gl_para);
+				glutWireCube(50.0);
+
+				frames.push_back(currFrame);
+				if (KeyFrameSelection(FrameCount, currFrame.R, currFrame.t, keyFrames))
+				{
+					CreateKeyFrame(FrameCount, currFrame, currFrameImg, keyFrames, cameraPara);
+					triangulate = true;
+				}
+			}
 		}
 		else return;
 	}
@@ -295,7 +310,8 @@ void display(void)
 			Triangulation(keyFrames[0], keyFrames[1], cameraPara);
 		else if (keyFrames.size() > 2)
 		{
-
+			//multiple cases
+			//Triangulation
 		}
 	}
 

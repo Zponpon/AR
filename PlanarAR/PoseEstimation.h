@@ -31,6 +31,6 @@ void CreateFeatureMap(FeatureMap &featureMap, int minHessian);
 bool EstimateCameraTransformation(unsigned long FrameCount, double *cameraPara, double trans[3][4], FeatureMap &featureMap, Frame &currFrame, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers);
 //bool EstimateCameraTransformation(unsigned long FrameCount, std::vector<KeyFrame> &keyFrames, unsigned char *inputprevFrame, unsigned char **inputFrame, int frameWidth, int frameHeight, FeatureMap &featureMap, double *cameraPara, double trans[3][4]);
 //For Visual odometry
-bool EstimateCameraTransformation(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame &currFrame, cv::Mat &currFrameImg, std::vector<cv::DMatch> &goodMatchesSet);
+bool EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::vector<KeyFrame> &keyFrames, Frame &currFrame, cv::Mat &currFrameImg, std::vector<int> &goodKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet);
 
 #endif

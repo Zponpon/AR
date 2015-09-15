@@ -31,7 +31,7 @@ bool FeatureDetectionAndMatching(FeatureMap &featureMap, Frame &currFrame, cv::M
 void FindGoodMatches(FeatureMap &featureMap, cv::Mat &currFrame, std::vector<cv::KeyPoint> &keypoints_scene, std::vector<cv::DMatch> &matches, std::vector<cv::Point2f> &featureMapGoodmatches, std::vector<cv::Point2f> &frameGoodmatches);
 
 //For solvePnPRansac
-bool FeatureDetectionAndMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame &currFrame, cv::Mat &currFrameImg, unsigned int minHessian, std::vector<cv::DMatch> &goodMatchesSet);
+bool FeatureDetectionAndMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame &currFrame, cv::Mat &currFrameImg, unsigned int minHessian, std::vector<int> &goodKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet);
 
 //For triangulation (Two cases)
 void FindGoodMatches(KeyFrame &KF1, KeyFrame &KF2, std::vector<cv::DMatch> &matches, std::vector<cv::Point2f> &KF1GoodMatches, std::vector<cv::Point2f> &KF2GoodMatches, std::vector<cv::KeyPoint> *keypointsMatches, cv::Mat *descriptorsMatches);

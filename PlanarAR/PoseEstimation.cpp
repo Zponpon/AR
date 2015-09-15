@@ -592,20 +592,60 @@ bool EstimateCameraTransformation(unsigned long FrameCount, double *cameraPara, 
 	trans[2][2] = R.m_lpdEntries[8];
 	trans[2][3] = t.z;
 
+	currFrame.R = R;
+	currFrame.t = t;
+	currFrame.timeStamp = clock() / CLOCKS_PER_SEC;
+
 	//	把影像中好的特徵點放入prevFeatureMapinliers ，給OpticalFlow計算用
 	//	把場景中好的特徵點放入prevFrameinliers，給OpticalFlow計算用
 	prevFeatureMapInliers.swap(featureMapInliers);
 	prevFrameInliers.swap(frameInliers);
 
-	std::vector<cv::Point2f> ().swap(featureMapGoodMatches);
-	std::vector<cv::Point2f> ().swap(currFrameGoodMatches);
+	//std::vector<cv::Point2f> ().swap(featureMapGoodMatches);
+	//std::vector<cv::Point2f> ().swap(currFrameGoodMatches);
 	std::vector<cv::Point2f>().swap(featureMapInliers);
 	std::vector<cv::Point2f>().swap(frameInliers);
 	return true;
 }
 
-bool EstimateCameraTransformation(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame &currFrame, cv::Mat &currFrameImg, std::vector<cv::DMatch> &goodMatchesSet)
+bool EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::vector<KeyFrame> &keyFrames, Frame &currFrame, cv::Mat &currFrameImg, std::vector<int> &goodKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
 {
-	//3D map
-	//cv::solvePnPRansac();
+	std::vector<cv::Point3f> matched3DPts;
+	std::vector<cv::Point2f> matched2DPts;
+	for (std::size_t i = 0; i < goodMatchesSet.size(); ++i)
+	{
+		for (std::size_t j = 0; j < goodMatchesSet[i].size(); ++j)
+		{
+			matched3DPts.push_back(keyFrames[goodKeyFrameIdx[i]].r3dPts[goodMatchesSet[i][j].queryIdx]);
+			matched2DPts.push_back(keyFrames[goodKeyFrameIdx[i]].keypoints[goodMatchesSet[i][j].trainIdx].pt);
+		}
+	}
+	cv::Mat K(3, 3, CV_64F), distCoeffs;
+	for (int i = 0; i < 9; ++i)
+		K.at<double>(i) = cameraPara[i];
+	cv::Mat rVec, t, inliers;
+	cv::solvePnPRansac(matched3DPts, matched2DPts, K, distCoeffs, rVec, t, false, 100, 8.0, 100, inliers);
+	cv::Mat R;
+	cv::Rodrigues(rVec, R);
+
+	currFrame.R.CreateMatrix(3, 3);
+	for (int i = 0; i < 9; ++i)
+		currFrame.R.m_lpdEntries[i] = R.at<double>(i);
+	currFrame.t.x = t.at<double>(0); currFrame.t.y = t.at<double>(1); currFrame.t.z = t.at<double>(2);
+	currFrame.timeStamp = clock() / CLOCKS_PER_SEC;
+
+	trans[0][0] = currFrame.R.m_lpdEntries[0];
+	trans[0][1] = currFrame.R.m_lpdEntries[1];
+	trans[0][2] = currFrame.R.m_lpdEntries[2];
+	trans[0][3] = currFrame.t.x;
+	trans[1][0] = currFrame.R.m_lpdEntries[3];
+	trans[1][1] = currFrame.R.m_lpdEntries[4];
+	trans[1][2] = currFrame.R.m_lpdEntries[5];
+	trans[1][3] = currFrame.t.y;
+	trans[2][0] = currFrame.R.m_lpdEntries[6];
+	trans[2][1] = currFrame.R.m_lpdEntries[7];
+	trans[2][2] = currFrame.R.m_lpdEntries[8];
+	trans[2][3] = currFrame.t.z;
+
+	return true;
 }
