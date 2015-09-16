@@ -22,7 +22,7 @@ void CreateProjMatrix(double *cameraPara, const MyMatrix &R, const Vector3d &t, 
 	projMatrix = K * projMatrix;
 }
 
-void CreateKeyFrame(unsigned long index, Frame &currFrame, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames, double *cameraPara)
+void CreateKeyFrame(double *cameraPara, Frame &currFrame, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames)
 {
 	KeyFrame keyFrame;
 	currFrameImg.copyTo(keyFrame.image);
@@ -31,12 +31,10 @@ void CreateKeyFrame(unsigned long index, Frame &currFrame, cv::Mat &currFrameImg
 	keyFrame.R.CreateMatrix(3, 3);
 	keyFrame.R = currFrame.R;
 	keyFrame.t = currFrame.t;
-	keyFrame.index = index;
 	CreateProjMatrix(cameraPara, keyFrame.R, keyFrame.t, keyFrame.projMatrix);
 	keyFrames.push_back(keyFrame);
 }
 
-//std::vector<MyMatrix> projMatrixSet;
 double calcDistance(Vector3d &t1, Vector3d &t2)
 {
 	double t1Length = sqrt(pow(t1.x, 2.0) + pow(t1.y, 2.0) + pow(t1.z, 2.0));
@@ -66,7 +64,7 @@ double calcAngle(MyMatrix &R1, MyMatrix &R2)
 	return theta;
 }
 
-bool isGoodKeyFrame(Vector3d &t1, Vector3d &t2, Vector3d &r3dPtVec)
+bool isMatchedKeyFrame(Vector3d &t1, Vector3d &t2, Vector3d &r3dPtVec)
 {
 	//用兩張frame的原點算出原點的3D點座標
 	//計算t跟原點跟3D點座標的向量之夾角
@@ -86,7 +84,7 @@ bool isGoodKeyFrame(Vector3d &t1, Vector3d &t2, Vector3d &r3dPtVec)
 	return false;
 }
 
-void FindGoodKeyFrames(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame &currFrame, std::vector<int> &goodKeyFrameIdx)
+void FindMatchedKeyFrames(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame &currFrame, std::vector<int> &goodKeyFrameIdx)
 {
 	//SolvePnPRansac
 	MyMatrix projMatrix(3, 4);
@@ -94,36 +92,23 @@ void FindGoodKeyFrames(double *cameraPara, std::vector<KeyFrame> &keyFrames, Fra
 	cv::Point2f originPt(400.0f, 300.0f);
 	for (int i = 0; i < keyFrames.size(); ++i)
 	{
-		cv::Point3f r3dPt;
+		cv::Point3d r3dPt;
 		if (Find3DCoordinates(keyFrames[i].projMatrix, projMatrix, originPt, originPt, r3dPt))
 		{
 			Vector3d r3dPtVec;
 			r3dPtVec.x = (double)r3dPt.x; r3dPtVec.y = (double)r3dPt.y; r3dPtVec.z = (double)r3dPt.z;
-			if (isGoodKeyFrame(keyFrames[i].t, currFrame.t, r3dPtVec))
+			if (isMatchedKeyFrame(keyFrames[i].t, currFrame.t, r3dPtVec))
 				goodKeyFrameIdx.push_back(i);
 		}
 	}
 }
 
-bool KeyFrameSelection(unsigned long index, MyMatrix &R, Vector3d t, std::vector<KeyFrame> &keyFrames)
+bool KeyFrameSelection(std::vector<KeyFrame> &keyFrames, Frame &currFrame)
 {
-	if (index - keyFrames[0].index < 20)
-		return false;
-	//std::size_t startingIdx = 0;
-	//Test three keyframes？
-	for (std::size_t i = keyFrames.size() - 3; i < keyFrames.size();)
-	{
-		//What is the threshold？
-		if (calcDistance(keyFrames[i].t, t) > 50 || calcAngle(keyFrames[i].R, R) < 30)
-			return true;
-		else
-		{
-			++i;
-			if (i == keyFrames.size())
-				return false;
-		}
-	}
+	//if(calcDistance < xxx)
+	return false;
+	//if(calcAngle < xx)
+	return false;
 
-	//if (calcDistance(keyFrames[0]))
 	return true;
 }

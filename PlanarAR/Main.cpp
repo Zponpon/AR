@@ -30,14 +30,14 @@ unsigned char *prevFrame = NULL;
 double cameraPara[9] = { 9.1317151001595698e+002, 0.00000, 3.9695336273339319e+002, 0.00000, 9.1335671139215276e+002, 2.9879860363446750e+002, 0.00000, 0.00000, 1.00000 };
 
 FeatureMap featureMap;
-std::vector<FeatureMap> featureMaps;
-std::vector<Frame> frames;
+static std::vector<FeatureMap> featureMaps;
+static std::vector<Frame> frames;
 cv::VideoWriter writer("GoProTestVideo.avi", CV_FOURCC('M', 'J', 'P', 'G'), 10.0, cv::Size(800, 600));
 
 clock_t t_start, t_end;
 
-std::vector<KeyFrame> keyFrames;
-std::vector<cv::Point2f> prevFrameInliers, prevFeatureMapInliers;
+static std::vector<KeyFrame> keyFrames;
+static std::vector<cv::Point2f> prevFrameInliers, prevFeatureMapInliers;
 
 void InitOpenGL(void)
 {
@@ -255,70 +255,52 @@ void display(void)
 	bool triangulate = false;
 	Frame currFrame;
 	cv::Mat currFrameImg = cv::Mat(winHeight, winWidth, CV_8UC3, frame);
+	if (FeatureDetection(3000, currFrame, currFrameImg)) return;
+
 	std::vector<cv::Point2f> currFrameGoodMatches, featureMapGoodMatches;
-
-	if (FeatureDetectionAndMatching(featureMap, currFrame, currFrameImg, prevFrame, 3000, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
+	std::vector<int> goodKeyFrameIdx;
+	std::vector< std::vector<cv::DMatch> > goodMatchesSet;
+	if (FeatureMatching(featureMap, currFrame, currFrameImg, prevFrame, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
 	{
-		if (EstimateCameraTransformation(FrameCount, cameraPara, trans, featureMap, currFrame, currFrameImg, keyFrames, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
+		EstimateCameraTransformation(FrameCount, cameraPara, trans, featureMap, currFrame, currFrameImg, keyFrames, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers);
+		displaySetting(trans, gl_para);
+		glutWireTeapot(100.0);
+
+		frames.push_back(currFrame);
+
+		if (keyFrames.size() == 0)
+			CreateKeyFrame(cameraPara, currFrame, currFrameImg, keyFrames);
+		else if (KeyFrameSelection(keyFrames, currFrame))
 		{
-			//argConvGlpara(trans, gl_para);
-			//DrawMode3D(cameraPara, winWidth, winHeight, true, CAMERA_ORIENTATION_POSITIVE_Z);
-
-			displaySetting(trans, gl_para);
-			glutWireTeapot(100.0);
-
-			frames.push_back(currFrame);
-
-			if (keyFrames.size() == 0)
-				CreateKeyFrame(FrameCount, currFrame, currFrameImg, keyFrames, cameraPara);
-			else if (KeyFrameSelection(FrameCount, currFrame.R, currFrame.t, keyFrames))
+			CreateKeyFrame(cameraPara, currFrame, currFrameImg, keyFrames);
+			if (keyFrames.size() == 2)
+				Triangulation(keyFrames[0], keyFrames[1], cameraPara);
+			else
 			{
-				CreateKeyFrame(FrameCount, currFrame, currFrameImg, keyFrames, cameraPara);
-				triangulate = true;
+				FindMatchedKeyFrames(cameraPara, keyFrames, currFrame, goodKeyFrameIdx);
+				Triangulation(cameraPara, keyFrames, goodKeyFrameIdx);
 			}
 		}
-		std::vector<cv::Point2f>().swap(currFrameGoodMatches);
-		std::vector<cv::Point2f>().swap(featureMapGoodMatches);
+		//std::vector<cv::Point2f>().swap(currFrameGoodMatches);
+		//std::vector<cv::Point2f>().swap(featureMapGoodMatches);
 	}
-	else
+	else if (FeatureMatching(cameraPara, keyFrames, currFrame, currFrameImg, goodKeyFrameIdx, goodMatchesSet))
 	{
-		std::vector<int> goodKeyFrameIdx;
-		std::vector< std::vector<cv::DMatch> > goodMatchesSet;
-		if (FeatureDetectionAndMatching(cameraPara, keyFrames, currFrame, currFrameImg, 3000, goodKeyFrameIdx, goodMatchesSet))
-		{
-			if (EstimateCameraTransformation(cameraPara, trans, keyFrames, currFrame, currFrameImg, goodKeyFrameIdx, goodMatchesSet))
-			{
-				//argConvGlpara(trans, gl_para);
-				//DrawMode3D(cameraPara, winWidth, winHeight, true, CAMERA_ORIENTATION_POSITIVE_Z);
+		EstimateCameraTransformation(cameraPara, trans, keyFrames, currFrame, currFrameImg, goodKeyFrameIdx, goodMatchesSet);
+		std::vector< std::vector<cv::DMatch> >().swap(goodMatchesSet);
+		displaySetting(trans, gl_para);
+		glutWireCube(50.0);
 
-				displaySetting(trans, gl_para);
-				glutWireCube(50.0);
-
-				frames.push_back(currFrame);
-				if (KeyFrameSelection(FrameCount, currFrame.R, currFrame.t, keyFrames))
-				{
-					CreateKeyFrame(FrameCount, currFrame, currFrameImg, keyFrames, cameraPara);
-					triangulate = true;
-				}
-			}
-		}
-		else return;
-	}
-	if (triangulate)
-	{
-		if (keyFrames.size() == 2)
-			Triangulation(keyFrames[0], keyFrames[1], cameraPara);
-		else if (keyFrames.size() > 2)
+		frames.push_back(currFrame);
+		if (KeyFrameSelection(keyFrames, currFrame))
 		{
-			//multiple cases
-			//Triangulation
+			CreateKeyFrame(cameraPara, currFrame, currFrameImg, keyFrames);
+			Triangulation(cameraPara, keyFrames, goodKeyFrameIdx);
 		}
 	}
-
 	glutSwapBuffers();
 	FrameCount++;
-	if (prevFrame!=NULL)
-		delete[]prevFrame;//刪除前一次的記憶體位址
+	if (prevFrame!=NULL)	delete[]prevFrame;
 }
 
 void KeyboardFunc(unsigned char key, int x, int y)

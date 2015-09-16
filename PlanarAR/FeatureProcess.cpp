@@ -209,6 +209,7 @@ void FindGoodMatches(std::vector<cv::DMatch> &matches, std::vector<cv::DMatch> &
 			temp.push_back(goodMatches[i]);
 	}
 	goodMatches.swap(temp);
+	std::vector<cv::DMatch>().swap(temp);
 }
 
 void FindGoodMatches(KeyFrame &prevKeyFrame, KeyFrame &latestKeyFrame, std::vector<cv::DMatch> &matches)
@@ -370,14 +371,20 @@ void OpticalFlow(cv::Mat &prevFrame, cv::Mat &currFrame, std::vector<cv::Point2f
 	std::vector<float>().swap(error);
 }
 
-bool FeatureDetectionAndMatching(FeatureMap &featureMap, Frame &currFrame, cv::Mat &currFrameImg, unsigned char *inputPrevFrame, unsigned int minHessian, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
+bool FeatureDetection(unsigned int minHessian, Frame &currFrame, cv::Mat &currFrameImg)
+{
+	SurfDetection(currFrameImg, currFrame.keypoints, currFrame.descriptors, minHessian);
+	if (currFrame.keypoints.size() == 0)
+		return false;
+	return true;
+}
+
+bool FeatureMatching(FeatureMap &featureMap, Frame &currFrame, cv::Mat &currFrameImg, unsigned char *inputPrevFrame, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
 {
 	//Camera captures the marker
 	cv::Mat prevFrameImg;
 	if (inputPrevFrame != NULL)
 		prevFrameImg = cv::Mat(currFrameImg.rows, currFrameImg.cols, CV_8UC3, inputPrevFrame);
-	SurfDetection(currFrameImg, currFrame.keypoints, currFrame.descriptors, minHessian);
-	if (currFrame.keypoints.size() == 0) return false;
 	std::vector<cv::DMatch> matches;
 	FlannMatching(featureMap.descriptors, currFrame.descriptors, matches);
 	FindGoodMatches(featureMap, currFrameImg, currFrame.keypoints, matches, featureMapGoodMatches, currFrameGoodMatches);
@@ -425,14 +432,12 @@ bool FeatureDetectionAndMatching(FeatureMap &featureMap, Frame &currFrame, cv::M
 	return true;
 }
 
-bool FeatureDetectionAndMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame &currFrame, cv::Mat &currFrameImg, unsigned int minHessian, std::vector<int> &goodKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
+bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame &currFrame, cv::Mat &currFrameImg, std::vector<int> &goodKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
 {
 	//For SolvePnPRansac
 	if (keyFrames.size() < 2)	return false;
-	SurfDetection(currFrameImg, currFrame.keypoints, currFrame.descriptors, minHessian);
-	if (currFrame.keypoints.size() == 0)	return false;
 	std::vector<cv::DMatch> matches;
-	FindGoodKeyFrames(cameraPara, keyFrames, currFrame, goodKeyFrameIdx);
+	FindMatchedKeyFrames(cameraPara, keyFrames, currFrame, goodKeyFrameIdx);
 	goodMatchesSet.resize(goodKeyFrameIdx.size());
 	for (std::size_t i = 0; i < goodKeyFrameIdx.size(); ++i)
 	{
@@ -440,4 +445,5 @@ bool FeatureDetectionAndMatching(double *cameraPara, std::vector<KeyFrame> &keyF
 		FlannMatching(keyFrames[goodKeyFrameIdx[i]].descriptors_3D, currFrame.descriptors, matches);
 		FindGoodMatches(matches, goodMatchesSet[i]);
 	}
+	return true;
 }

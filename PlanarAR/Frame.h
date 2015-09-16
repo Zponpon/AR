@@ -39,13 +39,13 @@ public:
 
 	std::vector<cv::KeyPoint> keypoints_3D;
 	cv::Mat descriptors_3D;
-	std::vector<cv::Point3f> r3dPts;
+	std::vector<cv::Point3d> r3dPts;
 	unsigned long index;
 };
 
-void CreateKeyFrame(unsigned long index, Frame &currFrame, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames, double *cameraPara);
+void CreateKeyFrame(double *cameraPara, Frame &currFrame, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames);
 
-void FindGoodKeyFrames(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame &currFrame, std::vector<int> &goodKeyFrameIdx);
+void FindMatchedKeyFrames(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame &currFrame, std::vector<int> &goodKeyFrameIdx);
 
-bool KeyFrameSelection(unsigned long index, MyMatrix &R, Vector3d t, std::vector<KeyFrame> &keyFrames);
+bool KeyFrameSelection(std::vector<KeyFrame> &keyFrames, Frame &currFrame);
 #endif

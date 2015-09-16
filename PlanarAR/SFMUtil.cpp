@@ -11,7 +11,7 @@
 #include "levmar.h"
 
 //For two views case
-bool ReProjectToImage(MyMatrix &P, const cv::Point2f &pt, cv::Point3f &r3DPt)
+bool ReProjectToImage(MyMatrix &P, const cv::Point2f &pt, cv::Point3d &r3DPt)
 {
 	MyMatrix r3DptVec(4, 1);
 	r3DptVec.m_lpdEntries[0] = r3DPt.x;
@@ -36,7 +36,7 @@ bool ReProjectToImage(MyMatrix &P, const cv::Point2f &pt, cv::Point3f &r3DPt)
 }
 
 //For multiple views case
-bool ReProjectToImage(std::vector<MyMatrix> &Ps, const std::vector<cv::Point2f> &pts, cv::Point3f &r3DPts)
+bool ReProjectToImage(std::vector<MyMatrix> &Ps, const std::vector<cv::Point2f> &pts, cv::Point3d &r3DPts)
 {
 	for (int i = 0; i < Ps.size(); ++i)
 	{
@@ -100,7 +100,7 @@ bool Find3DCoordinates(const std::vector<MyMatrix> &Ps, const std::vector<Point3
 /*  Inpput: Ps: projection matrixs, pts: image correspondences in ordinary coordinates
 /*  Output: rPt: reconstructed 3D point
 /***************************************************************************************************************/
-bool Find3DCoordinates(std::vector<MyMatrix> &Ps, const std::vector<cv::Point2f> &pts, cv::Point3f &r3DPt)
+bool Find3DCoordinates(std::vector<MyMatrix> &Ps, const std::vector<cv::Point2f> &pts, cv::Point3d &r3DPt)
 {
 	int nViews;
 
@@ -161,7 +161,7 @@ bool Find3DCoordinates(std::vector<MyMatrix> &Ps, const std::vector<cv::Point2f>
 /*  Inpput: Ps: projection matrixs, pts: image correspondences in ordinary coordinates
 /*  Output: rPt: reconstructed 3D point
 /***************************************************************************************************************/
-bool Find3DCoordinates(MyMatrix &K, std::vector<MyMatrix> &Rs, std::vector<MyMatrix> &ts, const std::vector<Point2f> &pts, Point3f &r3DPt)
+bool Find3DCoordinates(MyMatrix &K, std::vector<MyMatrix> &Rs, std::vector<MyMatrix> &ts, const std::vector<Point2f> &pts, Point3d &r3DPt)
 {
 	//鄧老師改的
 	int nViews;
@@ -204,7 +204,7 @@ bool Find3DCoordinates(MyMatrix &K, std::vector<MyMatrix> &Rs, std::vector<MyMat
 /*  Inpput: Ps: projection matrixs, pts: image correspondences in ordinary coordinates
 /*  Output: rPt: reconstructed 3D point
 /***************************************************************************************************************/
-bool Find3DCoordinates(MyMatrix &P1, MyMatrix &P2, const cv::Point2f &pt1, const cv::Point2f &pt2, cv::Point3f &r3DPt)
+bool Find3DCoordinates(MyMatrix &P1, MyMatrix &P2, const cv::Point2f &pt1, const cv::Point2f &pt2, cv::Point3d &r3DPt)
 {
 	MyMatrix *A, *U, *D, *V;
 	A = new MyMatrix(4, 4);
@@ -275,7 +275,7 @@ bool Find3DCoordinates(MyMatrix &P1, MyMatrix &P2, const cv::Point2f &pt1, const
 /*         F: fundamental matrix of the two views 
 /*  Output: rPt: reconstructed 3D point
 /***************************************************************************************************************/
-bool OptimalTriangulation(const MyMatrix &P1, const MyMatrix &P2, const Point2d &pt1, const Point2d &pt2, const MyMatrix &F, Point3d &r3DPt)
+bool OptimalTriangulation(const MyMatrix &P1, const MyMatrix &P2, const cv::Point2f &pt1, const cv::Point2f &pt2, const MyMatrix &F, cv::Point3d &r3DPt)
 {
 	MyMatrix T1(3, 3), T2(3, 3);
 
@@ -375,20 +375,20 @@ bool OptimalTriangulation(const MyMatrix &P1, const MyMatrix &P2, const Point2d 
 	MyMatrix xx2 = T2*R2.Transpose()*x2;
 
 	std::vector<MyMatrix> Ps;
-	std::vector<Point2d> pts;
+	std::vector<cv::Point2f> pts;
 
 	Ps.push_back(P1);
 	Ps.push_back(P2);
 
-	Point2d pt;
+	cv::Point2f pt;
 	pt.x = xx1.m_lpdEntries[0] / xx1.m_lpdEntries[2];
 	pt.y = xx1.m_lpdEntries[1] / xx1.m_lpdEntries[2];
 	pts.push_back(pt);
 	pt.x = xx2.m_lpdEntries[0] / xx2.m_lpdEntries[2];
 	pt.y = xx2.m_lpdEntries[1] / xx2.m_lpdEntries[2];
 	pts.push_back(pt);
-	return true;
-	//return Find3DCoordinates(Ps, pts, r3DPt);
+
+	return Find3DCoordinates(Ps, pts, r3DPt);
 }
 
 /***************************************************************************************************************/
@@ -515,31 +515,12 @@ double EstimateFocalLength(MyMatrix &F, double u0, double v0, double u1, double 
 	return sqrt(-f1.m_lpdEntries[0] / f2.m_lpdEntries[0]);
 }
 
-void CreateProjMatrix(MyMatrix &K, const MyMatrix &R, const Vector3d &t, MyMatrix &projMatrix)
-{
-	projMatrix.m_lpdEntries[0]	= R.m_lpdEntries[0];
-	projMatrix.m_lpdEntries[1]	= R.m_lpdEntries[1];
-	projMatrix.m_lpdEntries[2]	= R.m_lpdEntries[2];
-	projMatrix.m_lpdEntries[3]	= t.x;
-	projMatrix.m_lpdEntries[4]	= R.m_lpdEntries[3];
-	projMatrix.m_lpdEntries[5]	= R.m_lpdEntries[4];
-	projMatrix.m_lpdEntries[6]	= R.m_lpdEntries[5];
-	projMatrix.m_lpdEntries[7]	= t.y;
-	projMatrix.m_lpdEntries[8]	= R.m_lpdEntries[6];
-	projMatrix.m_lpdEntries[9]	= R.m_lpdEntries[7];
-	projMatrix.m_lpdEntries[10] = R.m_lpdEntries[8];
-	projMatrix.m_lpdEntries[11] = t.z;
-
-	projMatrix = K * projMatrix;
-}
-
 void Triangulation(KeyFrame &KF1, KeyFrame &KF2, double *cameraPara)
 {
-	//For two case
 	std::vector<cv::DMatch> matches;
 	std::vector<cv::Point2f> KF1GoodMatches, KF2GoodMatches;
 	std::vector<int> goodPts3DIdx;
-	std::vector<cv::Point3f> pts3D;
+	std::vector<cv::Point3d> pts3D;
 	std::vector<cv::KeyPoint> keypointsMatches[2];
 	cv::Mat descriptorsMatches[2];
 	FlannMatching(KF1.descriptors, KF2.descriptors, matches);
@@ -557,7 +538,7 @@ void Triangulation(KeyFrame &KF1, KeyFrame &KF2, double *cameraPara)
 	for (int i = 0; i < KF1GoodMatches.size(); ++i)
 	{
 		//Triangulate
-		cv::Point3f pt3D;
+		cv::Point3d pt3D;
 		if (Find3DCoordinates(KF1.projMatrix, KF2.projMatrix,
 			KF1GoodMatches[i], KF2GoodMatches[i], pt3D))
 		{
@@ -567,8 +548,8 @@ void Triangulation(KeyFrame &KF1, KeyFrame &KF2, double *cameraPara)
 	}
 	for (int i = 0; i < pts3D.size(); ++i)
 	{
-		if ((pts3D[i].x > 400.0f || pts3D[i].x < -400.0f
-			|| pts3D[i].y > 300.0f || pts3D[i].y < -300.0f))
+		if ((pts3D[i].x > 400.0 || pts3D[i].x < -400.0
+			|| pts3D[i].y > 300.0 || pts3D[i].y < -300.0))
 		{
 			KF1.r3dPts.push_back(pts3D[i]);
 			KF2.r3dPts.push_back(pts3D[i]);
@@ -597,51 +578,26 @@ void Triangulation(KeyFrame &KF1, KeyFrame &KF2, double *cameraPara)
 	std::vector<cv::KeyPoint>().swap(keypointsMatches[0]);
 	std::vector<cv::KeyPoint>().swap(keypointsMatches[1]);
 	std::vector<cv::DMatch>  ().swap(matches);
-	std::vector<cv::Point3f> ().swap(pts3D);
+	std::vector<cv::Point3d> ().swap(pts3D);
 }
 
-void Triangulation(std::vector<KeyFrame> &keyFrames)
+void Triangulation(double *cameraPara, std::vector<KeyFrame> &keyFrames, std::vector<int> &goodKeyFrameIdx)
 {
-	//For multiple cases
-	std::vector<MyMatrix> Ps;
-	std::vector<cv::DMatch> goodMatches[2];
-	//std::vector<cv::Point2f> prevKeyFrameGoodMatches, latestKeyFrameGoodMatches;
-	std::multimap<int, int> matchIdx;
-	for (int i = 0; i < 2; ++i)
+	//std::vector<KeyFrame> matchedKFs;
+	
+	for (std::size_t i = 0; i < goodKeyFrameIdx.size(); ++i)
 	{
-		std::vector<cv::KeyPoint> keypointsMatches[3];
-		cv::Mat descriptorsMatches[3];
-		FlannMatching(keyFrames[i].descriptors, keyFrames[2].descriptors, goodMatches[i]);
-		//FindGoodMatches(keyFrames[i], keyFrames[1], goodMatches[i]);
-		Ps.push_back(keyFrames[i].projMatrix);
+		keyFrames[goodKeyFrameIdx[i]].r3dPts.clear();
+		keyFrames[goodKeyFrameIdx[i]].keypoints_3D.clear();
+		keyFrames[goodKeyFrameIdx[i]].descriptors_3D.release();
 	}
-	Ps.push_back(keyFrames[keyFrames.size() - 1].projMatrix);
-	for (int i = 0; i < 2; ++i)
+	goodKeyFrameIdx.push_back(keyFrames.size() - 1);
+	for (std::size_t i = 0; i < goodKeyFrameIdx.size(); ++i)
 	{
-		for (int j = 0; j < goodMatches[i].size(); ++i)
+		for (std::size_t j = i + 1; j < goodKeyFrameIdx.size(); ++j)
 		{
-			matchIdx.insert(std::pair<int, int>(goodMatches[i][j].trainIdx, goodMatches[i][j].queryIdx));
+			//std::vector<cv::DMatch> matches;
+			//FlannMatching(keyFrames[goodKeyFrameIdx[i]].descriptors, keyFrames[goodKeyFrameIdx[j]].descriptors, matches);
 		}
 	}
-	for (std::multimap<int, int>::iterator it = matchIdx.begin(); it != matchIdx.end();)
-	{
-		int queryIdx1 = it->second;
-		int trainIdx1 = it->first;
-		it++;
-		int trainIdx2 = it->first;
-		int queryIdx2 = it->second;
-		if (trainIdx1 == trainIdx2)
-		{
-			cv::Point3f pt3D;
-			std::vector<cv::Point2f> pts2D;
-			pts2D.push_back(keyFrames[keyFrames.size() - 3].keypoints[queryIdx1].pt);
-			pts2D.push_back(keyFrames[keyFrames.size() - 2].keypoints[queryIdx2].pt);
-			pts2D.push_back(keyFrames[keyFrames.size() - 1].keypoints[trainIdx1].pt);
-			if (Find3DCoordinates(Ps, pts2D, pt3D))
-			{
-			}
-			it++;
-		}
-	}
-	//return true;
 }

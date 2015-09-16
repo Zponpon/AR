@@ -554,7 +554,7 @@ void CreateFeatureMap(FeatureMap &featureMap, int minHessian)
 	waitKey(0);
 }*/
 
-bool EstimateCameraTransformation(unsigned long FrameCount, double *cameraPara, double trans[3][4], FeatureMap &featureMap, Frame &currFrame, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
+void EstimateCameraTransformation(unsigned long FrameCount, double *cameraPara, double trans[3][4], FeatureMap &featureMap, Frame &currFrame, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
 {
 	//Using homography to estimate camera pose
 
@@ -603,12 +603,11 @@ bool EstimateCameraTransformation(unsigned long FrameCount, double *cameraPara, 
 
 	//std::vector<cv::Point2f> ().swap(featureMapGoodMatches);
 	//std::vector<cv::Point2f> ().swap(currFrameGoodMatches);
-	std::vector<cv::Point2f>().swap(featureMapInliers);
-	std::vector<cv::Point2f>().swap(frameInliers);
-	return true;
+	//std::vector<cv::Point2f>().swap(featureMapInliers);
+	//std::vector<cv::Point2f>().swap(frameInliers);
 }
 
-bool EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::vector<KeyFrame> &keyFrames, Frame &currFrame, cv::Mat &currFrameImg, std::vector<int> &goodKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
+void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::vector<KeyFrame> &keyFrames, Frame &currFrame, cv::Mat &currFrameImg, std::vector<int> &goodKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
 {
 	std::vector<cv::Point3f> matched3DPts;
 	std::vector<cv::Point2f> matched2DPts;
@@ -646,6 +645,4 @@ bool EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 	trans[2][1] = currFrame.R.m_lpdEntries[7];
 	trans[2][2] = currFrame.R.m_lpdEntries[8];
 	trans[2][3] = currFrame.t.z;
-
-	return true;
 }
