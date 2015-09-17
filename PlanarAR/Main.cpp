@@ -255,14 +255,14 @@ void display(void)
 	bool triangulate = false;
 	Frame currFrame;
 	cv::Mat currFrameImg = cv::Mat(winHeight, winWidth, CV_8UC3, frame);
-	if (FeatureDetection(3000, currFrame, currFrameImg)) return;
+	if (!FeatureDetection(3000, currFrame, currFrameImg)) return;
 
 	std::vector<cv::Point2f> currFrameGoodMatches, featureMapGoodMatches;
 	std::vector<int> goodKeyFrameIdx;
 	std::vector< std::vector<cv::DMatch> > goodMatchesSet;
 	if (FeatureMatching(featureMap, currFrame, currFrameImg, prevFrame, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
 	{
-		EstimateCameraTransformation(FrameCount, cameraPara, trans, featureMap, currFrame, currFrameImg, keyFrames, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers);
+		EstimateCameraTransformation(cameraPara, trans, featureMap, currFrame, currFrameImg, keyFrames, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers);
 		displaySetting(trans, gl_para);
 		glutWireTeapot(100.0);
 
@@ -277,17 +277,14 @@ void display(void)
 				Triangulation(keyFrames[0], keyFrames[1], cameraPara);
 			else
 			{
-				FindMatchedKeyFrames(cameraPara, keyFrames, currFrame, goodKeyFrameIdx);
-				Triangulation(cameraPara, keyFrames, goodKeyFrameIdx);
+				//FindMatchedKeyFrames(cameraPara, keyFrames, currFrame, goodKeyFrameIdx);
+				//Triangulation(cameraPara, keyFrames, goodKeyFrameIdx);
 			}
 		}
-		//std::vector<cv::Point2f>().swap(currFrameGoodMatches);
-		//std::vector<cv::Point2f>().swap(featureMapGoodMatches);
 	}
 	else if (FeatureMatching(cameraPara, keyFrames, currFrame, currFrameImg, goodKeyFrameIdx, goodMatchesSet))
 	{
 		EstimateCameraTransformation(cameraPara, trans, keyFrames, currFrame, currFrameImg, goodKeyFrameIdx, goodMatchesSet);
-		std::vector< std::vector<cv::DMatch> >().swap(goodMatchesSet);
 		displaySetting(trans, gl_para);
 		glutWireCube(50.0);
 

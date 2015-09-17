@@ -437,7 +437,11 @@ bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame
 	//For SolvePnPRansac
 	if (keyFrames.size() < 2)	return false;
 	std::vector<cv::DMatch> matches;
+	//這邊有BUG, currFrame的R,t都不知道
+	//需要用prevFrame的R,t來計算
 	FindMatchedKeyFrames(cameraPara, keyFrames, currFrame, goodKeyFrameIdx);
+	if (goodKeyFrameIdx.size() == 0)
+		return false;
 	goodMatchesSet.resize(goodKeyFrameIdx.size());
 	for (std::size_t i = 0; i < goodKeyFrameIdx.size(); ++i)
 	{

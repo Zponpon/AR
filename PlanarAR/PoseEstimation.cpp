@@ -554,7 +554,7 @@ void CreateFeatureMap(FeatureMap &featureMap, int minHessian)
 	waitKey(0);
 }*/
 
-void EstimateCameraTransformation(unsigned long FrameCount, double *cameraPara, double trans[3][4], FeatureMap &featureMap, Frame &currFrame, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
+void EstimateCameraTransformation(double *cameraPara, double trans[3][4], FeatureMap &featureMap, Frame &currFrame, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
 {
 	//Using homography to estimate camera pose
 
@@ -609,7 +609,7 @@ void EstimateCameraTransformation(unsigned long FrameCount, double *cameraPara, 
 
 void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::vector<KeyFrame> &keyFrames, Frame &currFrame, cv::Mat &currFrameImg, std::vector<int> &goodKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
 {
-	std::vector<cv::Point3f> matched3DPts;
+	std::vector<cv::Point3d> matched3DPts;
 	std::vector<cv::Point2f> matched2DPts;
 	for (std::size_t i = 0; i < goodMatchesSet.size(); ++i)
 	{

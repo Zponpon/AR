@@ -14,15 +14,12 @@
 #include "Matrix\MyMatrix.h"
 #include "BasicType.h"
 
-//extern std::vector<MyMatrix> projMatrixSet;
-
 class Frame
 {
 public:
-	std::vector<cv::KeyPoint> keypoints;	//Record all keypoints in the image
-	cv::Mat descriptors;	//Record all descriptors in the image
+	std::vector<cv::KeyPoint> keypoints;
+	cv::Mat descriptors;
 	clock_t timeStamp;
-	bool state; //不一定需要
 	MyMatrix R;
 	Vector3d t;
 };
@@ -30,17 +27,18 @@ public:
 class KeyFrame
 {
 public:
+	//2D
 	cv::Mat image;
 	std::vector<cv::KeyPoint> keypoints;
 	cv::Mat descriptors;
-	MyMatrix projMatrix;//不一定需要
-	MyMatrix R;
-	Vector3d t;
-
+	//3D map
 	std::vector<cv::KeyPoint> keypoints_3D;
 	cv::Mat descriptors_3D;
 	std::vector<cv::Point3d> r3dPts;
-	unsigned long index;
+	//Matrix & Vector
+	MyMatrix projMatrix;//不一定需要
+	MyMatrix R;
+	Vector3d t;
 };
 
 void CreateKeyFrame(double *cameraPara, Frame &currFrame, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames);

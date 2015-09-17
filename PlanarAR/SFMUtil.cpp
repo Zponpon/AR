@@ -9,7 +9,6 @@
 #include "FeatureProcess.h"
 #include "MathLib\MathLib.h"
 #include "levmar.h"
-
 //For two views case
 bool ReProjectToImage(MyMatrix &P, const cv::Point2f &pt, cv::Point3d &r3DPt)
 {
@@ -596,8 +595,8 @@ void Triangulation(double *cameraPara, std::vector<KeyFrame> &keyFrames, std::ve
 	{
 		for (std::size_t j = i + 1; j < goodKeyFrameIdx.size(); ++j)
 		{
-			//std::vector<cv::DMatch> matches;
-			//FlannMatching(keyFrames[goodKeyFrameIdx[i]].descriptors, keyFrames[goodKeyFrameIdx[j]].descriptors, matches);
+			std::vector<cv::DMatch> matches;
+			FlannMatching(keyFrames[goodKeyFrameIdx[i]].descriptors, keyFrames[goodKeyFrameIdx[j]].descriptors, matches);
 		}
 	}
 }
