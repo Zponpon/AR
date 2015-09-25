@@ -1,4 +1,5 @@
-#include "Frame.h"
+#include <cmath>
+#include "KeyFrameSelection.h"
 #include "SFMUtil.h"
 
 void CreateProjMatrix(double *cameraPara, const MyMatrix &R, const Vector3d &t, MyMatrix &projMatrix)

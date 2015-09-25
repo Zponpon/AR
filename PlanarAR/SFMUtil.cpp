@@ -523,7 +523,7 @@ void Triangulation(KeyFrame &KF1, KeyFrame &KF2, double *cameraPara)
 	std::vector<cv::KeyPoint> keypointsMatches[2];
 	cv::Mat descriptorsMatches[2];
 	FlannMatching(KF1.descriptors, KF2.descriptors, matches);
-	FindGoodMatches(KF1, KF2, matches, KF1GoodMatches, KF2GoodMatches, keypointsMatches, descriptorsMatches);
+	//FindGoodMatches(KF1, KF2, matches, KF1GoodMatches, KF2GoodMatches, keypointsMatches, descriptorsMatches);
 	if (KF1GoodMatches.size() == 0)
 		return;
 
@@ -565,19 +565,19 @@ void Triangulation(KeyFrame &KF1, KeyFrame &KF2, double *cameraPara)
 	{
 		if (goodPts3DIdx[i] != -1)
 		{
-			KF1.keypoints_3D.push_back(keypointsMatches[0][goodPts3DIdx[i]]);
+			/*KF1.keypoints_3D.push_back(keypointsMatches[0][goodPts3DIdx[i]]);
 			KF2.keypoints_3D.push_back(keypointsMatches[1][goodPts3DIdx[i]]);
 			descriptorsMatches[0].row(goodPts3DIdx[i]).copyTo(KF1.descriptors_3D.row(j));
-			descriptorsMatches[1].row(goodPts3DIdx[i]).copyTo(KF2.descriptors_3D.row(j));
+			descriptorsMatches[1].row(goodPts3DIdx[i]).copyTo(KF2.descriptors_3D.row(j));*/
 			++j;
 		}
 	}
 
-	std::vector<int>().swap(goodPts3DIdx);
+	/*std::vector<int>().swap(goodPts3DIdx);
 	std::vector<cv::KeyPoint>().swap(keypointsMatches[0]);
 	std::vector<cv::KeyPoint>().swap(keypointsMatches[1]);
 	std::vector<cv::DMatch>  ().swap(matches);
-	std::vector<cv::Point3d> ().swap(pts3D);
+	std::vector<cv::Point3d> ().swap(pts3D);*/
 }
 
 void Triangulation(double *cameraPara, std::vector<KeyFrame> &keyFrames, std::vector<int> &goodKeyFrameIdx)

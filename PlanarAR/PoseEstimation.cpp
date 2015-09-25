@@ -1,21 +1,17 @@
 #include <windows.h>
 #include <iostream>
 #include <GL/gl.h>
-#include <map>
 #include <cmath>
 #include "glut.h"
 #include "BasicType.h"
 #include "Matrix\MyMatrix.h"
 #include "Homography\Homography.h"
-#include "SiftGPU.h"
 #include "PoseEstimation.h"
 #include "SFMUtil.h"
 #include "FeatureProcess.h"
 #include "levmar.h"
 #include "debugfunc.h"
-
-//std::vector<cv::Point2f> prevFrameinliers; //Point2f vector good keypoints in previous frame
-//std::vector<cv::Point2f> prevFeatureMapinliers; //Point2f vector good keypoints in image
+//#include "SiftGPU.h"
 
 /*********************************************************************************************************/
 /* Given rotation axis and rotation angle, find the corresponding rotation matrix                        */
@@ -523,38 +519,7 @@ void CreateFeatureMap(FeatureMap &featureMap, int minHessian)
 	}
 }
 
-/*void Debug3D(KeyFrame &image, char *name, double *cameraPara)
-{
-	cv::Mat K(3, 3, CV_64F);
-	for (int i = 0; i < 9; ++i)
-		K.at<double>(i) = cameraPara[i];
-	cv::Mat Point4D(4, 1, CV_64F);
-	cv::Mat uvw(3, 1, CV_64F);
-	cv::Mat mat(3, 4, CV_64F);
-	Point4D.at<double>(0) = 400.0;
-	Point4D.at<double>(1) = 300.0;
-	Point4D.at<double>(2) = 0.0;
-	Point4D.at<double>(3) = 1.0;
-	//cout << K << endl << image.projMatrix << endl;
-	//mat = K * image.projMatrix;
-	//uvw = K * image.projMatrix * Point4D;
-	float x, y;
-	x = (float)uvw.at<double>(0) / uvw.at<double>(2);
-	y = (float)uvw.at<double>(1) / uvw.at<double>(2);
-	cout << "Debug 3D :" << x << ", " << y << endl;
-	std::vector<cv::KeyPoint> points;
-	cv::KeyPoint point;
-	point.pt.x = x;
-	point.pt.y = y;
-	points.push_back(point);
-	cv::Mat out;
-	cv::drawKeypoints(image.image, points, out, cv::Scalar::all(-1), cv::DrawMatchesFlags::DEFAULT);
-	imshow(name, out);
-	imwrite(name, out);
-	waitKey(0);
-}*/
-
-void EstimateCameraTransformation(double *cameraPara, double trans[3][4], FeatureMap &featureMap, Frame &currFrame, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
+void EstimateCameraTransformation(double *cameraPara, double trans[3][4], FeatureMap &featureMap, Frame &currFrame, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
 {
 	//Using homography to estimate camera pose
 
@@ -607,7 +572,7 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], Featur
 	//std::vector<cv::Point2f>().swap(frameInliers);
 }
 
-void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::vector<KeyFrame> &keyFrames, Frame &currFrame, cv::Mat &currFrameImg, std::vector<int> &goodKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
+void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::vector<KeyFrame> &keyFrames, Frame &currFrame, std::vector<int> &goodKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
 {
 	std::vector<cv::Point3d> matched3DPts;
 	std::vector<cv::Point2f> matched2DPts;

@@ -3,7 +3,7 @@
 
 #include <vector>
 #include "BasicType.h"
-#include "Frame.h"
+#include "KeyFrameSelection.h"
 #include "Matrix\MyMatrix.h"
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"

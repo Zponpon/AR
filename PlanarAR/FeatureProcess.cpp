@@ -127,12 +127,12 @@ void FindGoodMatches(KeyFrame &KF1, KeyFrame &KF2, std::vector<cv::DMatch> &matc
 	{
 		if (GoodMatchesFlag[i])
 		{
-			KF1GoodMatches.push_back(KF1.keypoints[goodMatches[i].queryIdx].pt);
+			/*KF1GoodMatches.push_back(KF1.keypoints[goodMatches[i].queryIdx].pt);
 			KF2GoodMatches.push_back(KF2.keypoints[goodMatches[i].trainIdx].pt);
 			keypointsMatches[0].push_back(KF1.keypoints[goodMatches[i].queryIdx]);
 			keypointsMatches[1].push_back(KF2.keypoints[goodMatches[i].trainIdx]);
 			KF1.descriptors.row(goodMatches[i].queryIdx).copyTo(tempdescriptors1.row(j));
-			KF2.descriptors.row(goodMatches[i].trainIdx).copyTo(tempdescriptors2.row(j));
+			KF2.descriptors.row(goodMatches[i].trainIdx).copyTo(tempdescriptors2.row(j));*/
 
 			//tempMatch.push_back(goodMatches[i]);
 			//tempkeypoints.push_back(img1.keypoints[goodMatches[i].queryIdx]);
@@ -143,13 +143,13 @@ void FindGoodMatches(KeyFrame &KF1, KeyFrame &KF2, std::vector<cv::DMatch> &matc
 		}
 	}
 
-	descriptorsMatches[0].create(keypointsMatches[0].size(), KF1.descriptors.cols, KF1.descriptors.type());
+/*	descriptorsMatches[0].create(keypointsMatches[0].size(), KF1.descriptors.cols, KF1.descriptors.type());
 	descriptorsMatches[1].create(keypointsMatches[1].size(), KF2.descriptors.cols, KF2.descriptors.type());
 	for (std::size_t i = 0; i < keypointsMatches[1].size(); ++i)
 	{
 		tempdescriptors1.row(i).copyTo(descriptorsMatches[0].row(i));
 		tempdescriptors2.row(i).copyTo(descriptorsMatches[1].row(i));
-	}
+	}*/
 #ifdef SHOWTHEIMAGE
 	DebugOpenCVMatchPoint(prevKeyFrame.image, tempkeypoints, latestKeyFrame.image, keypoints_3D, tempMatch, "APoints.jpg");
 #endif
@@ -212,61 +212,7 @@ void FindGoodMatches(std::vector<cv::DMatch> &matches, std::vector<cv::DMatch> &
 	std::vector<cv::DMatch>().swap(temp);
 }
 
-void FindGoodMatches(KeyFrame &prevKeyFrame, KeyFrame &latestKeyFrame, std::vector<cv::DMatch> &matches)
-{
-	std::vector<cv::DMatch> goodMatches;
-	double max_dist = 0; double min_dist = 100;
-	for (std::size_t i = 0; i < matches.size(); i++)
-	{
-		double dist = (double)(matches[i].distance);
-		if (dist < min_dist) min_dist = dist;
-		if (dist > max_dist) max_dist = dist;
-	}
-
-	//	Find the good matches
-	min_dist *= 2.0;
-	if (min_dist > 0.2) min_dist = 0.2;
-	for (std::size_t i = 0; i < matches.size(); i++)
-	{
-		double dist = (double)(matches[i].distance);
-		if (dist < min_dist)
-			goodMatches.push_back(matches[i]);
-	}
-
-	//標記一對多的點為false-> goodMatches
-	std::vector<bool> GoodMatchesFlag(goodMatches.size(), true);
-	for (std::size_t j = 0; j < goodMatches.size(); j++)
-	{
-		std::size_t index = j;	//紀錄distance較小的index
-		double distance = goodMatches[index].distance;
-		if (!GoodMatchesFlag[index])
-			continue;
-		for (std::size_t k = j + 1; k < goodMatches.size(); k++)
-		{
-			if (!GoodMatchesFlag[k])
-				continue;
-			if (goodMatches[index].trainIdx == goodMatches[k].trainIdx)
-			{
-				if (distance <= goodMatches[k].distance)
-					GoodMatchesFlag[k] = false;
-				else
-				{
-					GoodMatchesFlag[index] = false;
-					index = k;
-					distance = goodMatches[index].distance;
-				}
-			}
-		}
-	}
-	matches.clear();
-	for (std::size_t i = 0; i < goodMatches.size(); ++i)
-	{
-		if (GoodMatchesFlag[i])
-			matches.push_back(goodMatches[i]);
-	}
-}
-
-void DeleteOverlap(std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches)
+void RemoveOverlappingPts(std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches)
 {
 	//	把標記為True的點放入GoodMatchedPoints
 	//	刪除OpticalFlow和Surf重複的特徵點
@@ -379,12 +325,10 @@ bool FeatureDetection(unsigned int minHessian, Frame &currFrame, cv::Mat &currFr
 	return true;
 }
 
-bool FeatureMatching(FeatureMap &featureMap, Frame &currFrame, cv::Mat &currFrameImg, unsigned char *inputPrevFrame, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
+bool FeatureMatching(FeatureMap &featureMap, Frame &currFrame, cv::Mat &currFrameImg, cv::Mat &prevFrameImg, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
 {
 	//Camera captures the marker
-	cv::Mat prevFrameImg;
-	if (inputPrevFrame != NULL)
-		prevFrameImg = cv::Mat(currFrameImg.rows, currFrameImg.cols, CV_8UC3, inputPrevFrame);
+
 	std::vector<cv::DMatch> matches;
 	FlannMatching(featureMap.descriptors, currFrame.descriptors, matches);
 	FindGoodMatches(featureMap, currFrameImg, currFrame.keypoints, matches, featureMapGoodMatches, currFrameGoodMatches);
@@ -416,7 +360,7 @@ bool FeatureMatching(FeatureMap &featureMap, Frame &currFrame, cv::Mat &currFram
 
 	if (usingOpticalFlow)
 	{
-		DeleteOverlap(featureMapGoodMatches, currFrameGoodMatches);
+		RemoveOverlappingPts(featureMapGoodMatches, currFrameGoodMatches);
 		//cout << "Surf + OpticalFlow Good Matches Size : " << currFrameGoodMatches.size() << std::endl;
 		if ((int)currFrameGoodMatches.size() < 30)
 		{
@@ -446,7 +390,14 @@ bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame
 	for (std::size_t i = 0; i < goodKeyFrameIdx.size(); ++i)
 	{
 		std::vector<cv::DMatch> matches;
-		FlannMatching(keyFrames[goodKeyFrameIdx[i]].descriptors_3D, currFrame.descriptors, matches);
+		/*cv::Mat descriptors(keyFrames[goodKeyFrameIdx[i]].coresIdx.size(), keyFrames[goodKeyFrameIdx[i]].descriptors.cols, CV_32F);
+		int index = 0;
+		for (std::size_t j = 0; j < keyFrames[goodKeyFrameIdx[i]].coresIdx.size(); ++j)
+		{
+			keyFrames[goodKeyFrameIdx[i]].descriptors.row(keyFrames[goodKeyFrameIdx[i]].coresIdx[j]).copyTo(descriptors.row(index));
+			++index;
+		}*/
+		//FlannMatching(keyFrames[goodKeyFrameIdx[i]].descriptors_3D, currFrame.descriptors, matches);
 		FindGoodMatches(matches, goodMatchesSet[i]);
 	}
 	return true;

@@ -1,15 +1,16 @@
 #include <windows.h>
 #include <fstream>
 #include <GL/gl.h>
-#include "glut.h"
 #include <AR/gsub.h>
 #include <ctime>
+#include "glut.h"
+#include "VisualOdometry.h"
 #include "PoseEstimation.h"
-#include "Frame.h"
-#include "FeatureProcess.h"
+#include "KeyFrameSelection.h"
 #include "DebugFunc.h"
 #include "Video.h"
-#include "SFMUtil.h"
+
+
 /*#include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/opencv.hpp"*/
@@ -30,14 +31,14 @@ unsigned char *prevFrame = NULL;
 double cameraPara[9] = { 9.1317151001595698e+002, 0.00000, 3.9695336273339319e+002, 0.00000, 9.1335671139215276e+002, 2.9879860363446750e+002, 0.00000, 0.00000, 1.00000 };
 
 FeatureMap featureMap;
-static std::vector<FeatureMap> featureMaps;
-static std::vector<Frame> frames;
+//std::vector<FeatureMap> featureMaps;
+//std::vector<Frame> frameInfos;
 cv::VideoWriter writer("GoProTestVideo.avi", CV_FOURCC('M', 'J', 'P', 'G'), 10.0, cv::Size(800, 600));
 
 clock_t t_start, t_end;
 
-static std::vector<KeyFrame> keyFrames;
-static std::vector<cv::Point2f> prevFrameInliers, prevFeatureMapInliers;
+std::vector<KeyFrame> keyFrames;
+//static std::vector<cv::Point2f> prevFrameInliers, prevFeatureMapInliers;
 
 void InitOpenGL(void)
 {
@@ -199,27 +200,10 @@ void draw_axes(double size)
 	else glEnable(GL_COLOR_MATERIAL);
 }
 
-void displaySetting(double trans[3][4], double *gl_para)
-{
-	//argConvGlpara(trans, gl_para);
-	argConvGlpara(trans, gl_para);
-	DrawMode3D(cameraPara, winWidth, winHeight, true, CAMERA_ORIENTATION_POSITIVE_Z);
-	GLfloat   light_position[] = { 100.0, -200.0, 200.0, 0.0 };
-	GLdouble projection[16];
-	glGetDoublev(GL_PROJECTION_MATRIX, projection);
-
-	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixd(gl_para);
-
-	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-
-	glTranslated(0.0, 0.0, 50.0);
-	glRotated(90.0, 1.0, 0.0, 0.0);
-}
 void display(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-
+	
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
@@ -252,48 +236,30 @@ void display(void)
 	double trans[3][4];
 	double gl_para[16];
 
-	bool triangulate = false;
-	Frame currFrame;
-	cv::Mat currFrameImg = cv::Mat(winHeight, winWidth, CV_8UC3, frame);
-	if (!FeatureDetection(3000, currFrame, currFrameImg)) return;
-
-	std::vector<cv::Point2f> currFrameGoodMatches, featureMapGoodMatches;
-	std::vector<int> goodKeyFrameIdx;
-	std::vector< std::vector<cv::DMatch> > goodMatchesSet;
-	if (FeatureMatching(featureMap, currFrame, currFrameImg, prevFrame, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
+	cv::Mat prevFrameMat;
+	cv::Mat currFrameMat = cv::Mat(winHeight, winWidth, CV_8UC3, frame);
+	if (prevFrame != NULL)
+		prevFrameMat = cv::Mat(winHeight, winWidth, CV_8UC3, prevFrame);
+	//VOD(camerPara, trans, prevMat, currFrameMat)
+	bool rtn = VOD(cameraPara, trans, featureMap, keyFrames, prevFrameMat, currFrameMat);
+	if (rtn)
 	{
-		EstimateCameraTransformation(cameraPara, trans, featureMap, currFrame, currFrameImg, keyFrames, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers);
-		displaySetting(trans, gl_para);
+		//displaySetting(trans, gl_para);
+		argConvGlpara(trans, gl_para);
+		DrawMode3D(cameraPara, winWidth, winHeight, true, CAMERA_ORIENTATION_POSITIVE_Z);
+		GLfloat   light_position[] = { 100.0, -200.0, 200.0, 0.0 };
+		GLdouble projection[16];
+		glGetDoublev(GL_PROJECTION_MATRIX, projection);
+
+		glMatrixMode(GL_MODELVIEW);
+		glLoadMatrixd(gl_para);
+
+		glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
+		glTranslated(0.0, 0.0, 50.0);
+		glRotated(90.0, 1.0, 0.0, 0.0);
 		glutWireTeapot(100.0);
-
-		frames.push_back(currFrame);
-
-		if (keyFrames.size() == 0)
-			CreateKeyFrame(cameraPara, currFrame, currFrameImg, keyFrames);
-		else if (KeyFrameSelection(keyFrames, currFrame))
-		{
-			CreateKeyFrame(cameraPara, currFrame, currFrameImg, keyFrames);
-			if (keyFrames.size() == 2)
-				Triangulation(keyFrames[0], keyFrames[1], cameraPara);
-			else
-			{
-				//FindMatchedKeyFrames(cameraPara, keyFrames, currFrame, goodKeyFrameIdx);
-				//Triangulation(cameraPara, keyFrames, goodKeyFrameIdx);
-			}
-		}
-	}
-	else if (FeatureMatching(cameraPara, keyFrames, currFrame, currFrameImg, goodKeyFrameIdx, goodMatchesSet))
-	{
-		EstimateCameraTransformation(cameraPara, trans, keyFrames, currFrame, currFrameImg, goodKeyFrameIdx, goodMatchesSet);
-		displaySetting(trans, gl_para);
-		glutWireCube(50.0);
-
-		frames.push_back(currFrame);
-		if (KeyFrameSelection(keyFrames, currFrame))
-		{
-			CreateKeyFrame(cameraPara, currFrame, currFrameImg, keyFrames);
-			Triangulation(cameraPara, keyFrames, goodKeyFrameIdx);
-		}
+		//glutWireCube(5.0);
 	}
 	glutSwapBuffers();
 	FrameCount++;
@@ -339,10 +305,11 @@ void main(int argc, char *argv[])
 	glutKeyboardFunc(KeyboardFunc);
 
 	InitOpenGL();
-
+	
  	featureMap.image = cv::imread("11647241_636517923150104_1570377205_n.jpg");
-	featureMaps.push_back(featureMap);
+	//featureMaps.push_back(featureMap);
 	CreateFeatureMap(featureMap, 3000);
+	//LoadFeatureMap(argc, argv);
 
 	t_start = clock();
 
