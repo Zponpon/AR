@@ -1,19 +1,14 @@
 #include <windows.h>
 #include <fstream>
 #include <GL/gl.h>
+#include "glut.h"
 #include <AR/gsub.h>
 #include <ctime>
-#include "glut.h"
 #include "VisualOdometry.h"
 #include "PoseEstimation.h"
-#include "KeyFrameSelection.h"
+#include "KeyFrame.h"
 #include "DebugFunc.h"
 #include "Video.h"
-
-
-/*#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/opencv.hpp"*/
 
 #define VIEW_VOLUME_NEAR 1.0
 #define VIEW_VOLUME_FAR 3000.0
@@ -37,8 +32,7 @@ cv::VideoWriter writer("GoProTestVideo.avi", CV_FOURCC('M', 'J', 'P', 'G'), 10.0
 
 clock_t t_start, t_end;
 
-std::vector<KeyFrame> keyFrames;
-//static std::vector<cv::Point2f> prevFrameInliers, prevFeatureMapInliers;
+//std::vector<KeyFrame> keyFrames;
 
 void InitOpenGL(void)
 {
@@ -240,8 +234,7 @@ void display(void)
 	cv::Mat currFrameMat = cv::Mat(winHeight, winWidth, CV_8UC3, frame);
 	if (prevFrame != NULL)
 		prevFrameMat = cv::Mat(winHeight, winWidth, CV_8UC3, prevFrame);
-	//VOD(camerPara, trans, prevMat, currFrameMat)
-	bool rtn = VOD(cameraPara, trans, featureMap, keyFrames, prevFrameMat, currFrameMat);
+	bool rtn = VO(cameraPara, trans, featureMap, prevFrameMat, currFrameMat);
 	if (rtn)
 	{
 		//displaySetting(trans, gl_para);

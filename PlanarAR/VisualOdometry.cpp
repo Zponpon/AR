@@ -1,50 +1,46 @@
-#include "glut.h"
+#include <thread>
 #include "VisualOdometry.h"
 #include "FeatureProcess.h"
 #include "SFMUtil.h"
+
 static vector<cv::Point2f> prevFrameInliers, prevFeatureMapInliers;
-static vector<EstimateCamInfos> cameraPoseInfos;
+static vector<FrameMetaData> frameMetaDatas;
 static vector<FeatureMap> featureMaps;
-//static vector<KeyFrame> keyFrames
+static vector<KeyFrame> keyFrames;
+
 
 void LoadFeatureMap(int argc, char *argv[])
 {
 	//Loading featureMap
 }
 
-bool VOD(double *cameraPara, double trans[3][4], FeatureMap &featureMap, vector<KeyFrame> &keyFrames, cv::Mat &prevFrameMat, cv::Mat &currFrameMat)
+bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat &prevFrameMat, cv::Mat &currFrameMat)
 {
-	Frame currFrame;
-	if (!FeatureDetection(3000, currFrame, currFrameMat)) return false;
+	FrameMetaData currData;
+	if (!FeatureDetection(3000, currData, currFrameMat)) return false;
 
 	vector<cv::Point2f> currFrameGoodMatches, featureMapGoodMatches;
-	vector<int> goodKeyFrameIdx;
+	vector<int> neighboringKeyFrameIdx;
 	vector< vector<cv::DMatch> > goodMatchesSet;
 	
-	if (FeatureMatching(featureMap, currFrame, currFrameMat, prevFrameMat, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
+	if (FeatureMatching(featureMap, currData, currFrameMat, prevFrameMat, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
 	{
-		EstimateCameraTransformation(cameraPara, trans, featureMap, currFrame, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers);
-
-		//frames.push_back(currFrame);
-
+		EstimateCameraTransformation(cameraPara, trans, featureMap, currData, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers);
 		if (keyFrames.size() == 0)
-			CreateKeyFrame(cameraPara, currFrame, currFrameMat, keyFrames);
+			CreateKeyFrame(cameraPara, currData, currFrameMat, keyFrames);
 	}
-	else if (FeatureMatching(cameraPara, keyFrames, currFrame, currFrameMat, goodKeyFrameIdx, goodMatchesSet))
+	else if (FeatureMatching(cameraPara, keyFrames, currData, currFrameMat, neighboringKeyFrameIdx, goodMatchesSet))
 	{
-		EstimateCameraTransformation(cameraPara, trans, keyFrames, currFrame, goodKeyFrameIdx, goodMatchesSet);
-
-		//frames.push_back(currFrame);
-		//frameInfos.push_back(currFrame);
+		EstimateCameraTransformation(cameraPara, trans, keyFrames, currData, neighboringKeyFrameIdx, goodMatchesSet);
 	}
 	else return false;
-	if (KeyFrameSelection(keyFrames, currFrame))
+	if (KeyFrameSelection(keyFrames, currData))
 	{
-		CreateKeyFrame(cameraPara, currFrame, currFrameMat, keyFrames);
-		if (keyFrames.size() == 2)
-			Triangulation(keyFrames[0], keyFrames[1], cameraPara);
-		else
-			Triangulation(cameraPara, keyFrames, goodKeyFrameIdx);
+		CreateKeyFrame(cameraPara, currData, currFrameMat, keyFrames);
+		//std::thread thread1(Triangulation, cameraPara, keyFrames);
+		//thread1.join();
+		//Optimization
 	}
+	frameMetaDatas.push_back(currData);
 	return true;
 }

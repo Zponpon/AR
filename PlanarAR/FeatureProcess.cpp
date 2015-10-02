@@ -1,218 +1,42 @@
 #include "FeatureProcess.h"
 
-void FindGoodMatches(FeatureMap &featureMap, cv::Mat &currFrame, std::vector<cv::KeyPoint> &keypoints_frame, std::vector<cv::DMatch> &matches, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches)
+void SurfDetection(cv::Mat &image, std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors, unsigned int minHessian)
 {
-	//This method is to delete the feature points which are multimatch
-	//傳入currFrame做DEBUG用
+	int win = glutGetWindow();
+	cv::SurfFeatureDetector detector(minHessian);
+	detector.detect(image, keypoints);
+	if (keypoints.size() == 0){
+		glutSetWindow(win);
+		return;
+	}
+	cv::SurfDescriptorExtractor extractor;
+	extractor.compute(image, keypoints, descriptors);
 
-	std::vector<cv::DMatch> goodMatches;
-	//	Quick calcul ation of max and min distances between keypoints
-	double max_dist = 0; double min_dist = 100;
-	for (std::size_t i = 0; i < matches.size(); i++)
-	{
-		double dist = (double)(matches[i].distance);
-		if (dist < min_dist) min_dist = dist;
-		if (dist > max_dist) max_dist = dist;
-	}
-	cout << "(max, min) : (" << max_dist << ", " << min_dist << ")\n\n";
-	//DebugOpenCVMarkPoint(frame, keypoints_frame, "inputFrame.jpg");
-	//	Find the good matches
-	min_dist *= 2.0;
-	if (min_dist > 0.2)
-		min_dist = 0.2;
-	for (std::size_t i = 0; i < matches.size(); i++)
-	{
-		double dist = (double)(matches[i].distance);
-		if (dist < min_dist)
-			goodMatches.push_back(matches[i]);
-	}
-	//標記一對多的點為false-> goodMatches
-	std::vector<bool> GoodMatchesFlag(goodMatches.size(), true);	//判斷Surf算出來的點
-	
-	for (std::size_t j = 0; j < goodMatches.size(); j++)
-	{
-		std::size_t index = j;	//紀錄distance較小的index
-		double distance = goodMatches[index].distance;
-		if (!GoodMatchesFlag[index])
-			continue;
-		for (std::size_t k = j + 1; k < goodMatches.size(); k++)
-		{
-			if (!GoodMatchesFlag[k])
-				continue;
-			if (goodMatches[index].trainIdx == goodMatches[k].trainIdx)
-			{
-				if (distance <= goodMatches[k].distance)
-					GoodMatchesFlag[k] = false;
-				else
-				{
-					GoodMatchesFlag[index] = false;
-					index = k;
-					distance = goodMatches[index].distance;
-				}
-			}
-		}
-	}
-	//DebugOpenCVMatchPoint(featureMap.image, featureMap.keypoints, frame.image, frame.keypoints, goodMatches, "IMG1.JPG");
-	//把標記為true的點放入featureMap_goodMatches & frame_goodMatches
-	for (std::size_t i = 0; i < goodMatches.size(); i++)
-	{
-		if (GoodMatchesFlag[i])
-		{
-			featureMapGoodMatches.push_back(featureMap.keypoints[goodMatches[i].queryIdx].pt);
-			frameGoodMatches.push_back(keypoints_frame[goodMatches[i].trainIdx].pt);
-		}
-	}
-
-	//Release memory
-	std::vector<cv::DMatch>().swap(goodMatches);
-	std::vector<bool>().swap(GoodMatchesFlag);
+	glutSetWindow(win);
 }
 
-void FindGoodMatches(KeyFrame &KF1, KeyFrame &KF2, std::vector<cv::DMatch> &matches, std::vector<cv::Point2f> &KF1GoodMatches, std::vector<cv::Point2f> &KF2GoodMatches, std::vector<cv::KeyPoint> *keypointsMatches, cv::Mat *descriptorsMatches)
+void FlannMatching(cv::Mat &descriptors1, cv::Mat &descriptors2, std::vector<cv::DMatch> &matches)
 {
-	//This method is to triangulate points, and swap good matching keypoints & descriptors
-	//For two KeyFrame cases
-
-	//	Quick calcul ation of max and min distances between keypoints
-	std::vector<cv::DMatch> goodMatches;
-	double max_dist = 0; double min_dist = 100;
-	for (std::size_t i = 0; i < matches.size(); i++)
-	{
-		double dist = (double)(matches[i].distance);
-		if (dist < min_dist) min_dist = dist;
-		if (dist > max_dist) max_dist = dist;
-	}
-
-	//	Find the good matches
-	min_dist *= 2.0;
-	if (min_dist > 0.2) min_dist = 0.2;
-	for (std::size_t i = 0; i < matches.size(); i++)
-	{
-		double dist = (double)(matches[i].distance);
-		if (dist < min_dist)
-			goodMatches.push_back(matches[i]);
-	}
-
-	//標記一對多的點為false-> goodMatches
-	std::vector<bool> GoodMatchesFlag(goodMatches.size(), true);
-	for (std::size_t j = 0; j < goodMatches.size(); j++)
-	{
-		std::size_t index = j;	//紀錄distance較小的index
-		double distance = goodMatches[index].distance;
-		if (!GoodMatchesFlag[index])
-			continue;
-		for (std::size_t k = j + 1; k < goodMatches.size(); k++)
-		{
-			if (!GoodMatchesFlag[k])
-				continue;
-			if (goodMatches[index].trainIdx == goodMatches[k].trainIdx)
-			{
-				if (distance <= goodMatches[k].distance)
-					GoodMatchesFlag[k] = false;
-				else
-				{
-					GoodMatchesFlag[index] = false;
-					index = k;
-					distance = goodMatches[index].distance;
-				}
-			}
-		}
-	}
-	cv::Mat tempdescriptors1(goodMatches.size(), KF1.descriptors.cols, KF1.descriptors.type());
-	cv::Mat tempdescriptors2(goodMatches.size(), KF2.descriptors.cols, KF2.descriptors.type());
-	//std::vector<cv::KeyPoint> tempkeypoints;
-	//std::vector<cv::DMatch> tempMatch;
-
-	for (std::size_t i = 0, j = 0; i < goodMatches.size(); ++i)
-	{
-		if (GoodMatchesFlag[i])
-		{
-			/*KF1GoodMatches.push_back(KF1.keypoints[goodMatches[i].queryIdx].pt);
-			KF2GoodMatches.push_back(KF2.keypoints[goodMatches[i].trainIdx].pt);
-			keypointsMatches[0].push_back(KF1.keypoints[goodMatches[i].queryIdx]);
-			keypointsMatches[1].push_back(KF2.keypoints[goodMatches[i].trainIdx]);
-			KF1.descriptors.row(goodMatches[i].queryIdx).copyTo(tempdescriptors1.row(j));
-			KF2.descriptors.row(goodMatches[i].trainIdx).copyTo(tempdescriptors2.row(j));*/
-
-			//tempMatch.push_back(goodMatches[i]);
-			//tempkeypoints.push_back(img1.keypoints[goodMatches[i].queryIdx]);
-			//tempMatch.push_back(goodMatches[i]);
-			//tempMatch[j].queryIdx = j;
-			//tempMatch[j].trainIdx = j;
-			++j;
-		}
-	}
-
-/*	descriptorsMatches[0].create(keypointsMatches[0].size(), KF1.descriptors.cols, KF1.descriptors.type());
-	descriptorsMatches[1].create(keypointsMatches[1].size(), KF2.descriptors.cols, KF2.descriptors.type());
-	for (std::size_t i = 0; i < keypointsMatches[1].size(); ++i)
-	{
-		tempdescriptors1.row(i).copyTo(descriptorsMatches[0].row(i));
-		tempdescriptors2.row(i).copyTo(descriptorsMatches[1].row(i));
-	}*/
-#ifdef SHOWTHEIMAGE
-	DebugOpenCVMatchPoint(prevKeyFrame.image, tempkeypoints, latestKeyFrame.image, keypoints_3D, tempMatch, "APoints.jpg");
-#endif
-
-	//std::vector<cv::KeyPoint>().swap(tempkeypoints);
-	std::vector<cv::DMatch>().swap(matches);
-	std::vector<cv::DMatch>().swap(goodMatches);
-	std::vector<bool>().swap(GoodMatchesFlag);
+	int win = glutGetWindow();
+	cv::FlannBasedMatcher matcher;
+	if (descriptors1.type() != CV_32F)
+		descriptors1.convertTo(descriptors1, CV_32F);
+	if (descriptors2.type() != CV_32F)
+		descriptors2.convertTo(descriptors2, CV_32F);
+	matcher.match(descriptors1, descriptors2, matches);
+	glutSetWindow(win);
 }
 
-void FindGoodMatches(std::vector<cv::DMatch> &matches, std::vector<cv::DMatch> &goodMatches)
+bool FeatureDetection(unsigned int minHessian, FrameMetaData &currData, cv::Mat &currFrameImg)
 {
-	//For solvePnPRansac
-	double max_dist = 0; double min_dist = 100;
-	for (std::size_t i = 0; i < matches.size(); i++)
-	{
-		double dist = (double)(matches[i].distance);
-		if (dist < min_dist) min_dist = dist;
-		if (dist > max_dist) max_dist = dist;
-	}
-	min_dist *= 2.0;
-	if (min_dist > 0.2) min_dist = 0.2;
-	for (std::size_t i = 0; i < matches.size(); i++)
-	{
-		double dist = (double)(matches[i].distance);
-		if (dist < min_dist)
-			goodMatches.push_back(matches[i]);
-	}
-	std::vector<bool> GoodMatchesFlag(goodMatches.size(), true);
-	for (std::size_t j = 0; j < goodMatches.size(); j++)
-	{
-		std::size_t index = j;	//紀錄distance較小的index
-		double distance = goodMatches[index].distance;
-		if (!GoodMatchesFlag[index])
-			continue;
-		for (std::size_t k = j + 1; k < goodMatches.size(); k++)
-		{
-			if (!GoodMatchesFlag[k])
-				continue;
-			if (goodMatches[index].trainIdx == goodMatches[k].trainIdx)
-			{
-				if (distance <= goodMatches[k].distance)
-					GoodMatchesFlag[k] = false;
-				else
-				{
-					GoodMatchesFlag[index] = false;
-					index = k;
-					distance = goodMatches[index].distance;
-				}
-			}
-		}
-	}
-	std::vector<cv::DMatch> temp;
-	for (int i = 0; i < GoodMatchesFlag.size(); ++i)
-	{
-		if (GoodMatchesFlag[i])
-			temp.push_back(goodMatches[i]);
-	}
-	goodMatches.swap(temp);
-	std::vector<cv::DMatch>().swap(temp);
+	SurfDetection(currFrameImg, currData.keypoints, currData.descriptors, minHessian);
+	if (currData.keypoints.size() == 0)
+		return false;
+	return true;
 }
 
-void RemoveOverlappingPts(std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches)
+
+void RemoveDuplicatePts(std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches)
 {
 	//	把標記為True的點放入GoodMatchedPoints
 	//	刪除OpticalFlow和Surf重複的特徵點
@@ -253,33 +77,6 @@ void RemoveOverlappingPts(std::vector<cv::Point2f> &featureMapGoodMatches, std::
 	std::vector<bool>().swap(NotOverlayPointsFlag);
 }
 
-void SurfDetection(cv::Mat &image, std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors, unsigned int minHessian)
-{
-	int win = glutGetWindow();
-	cv::SurfFeatureDetector detector(minHessian);
-	detector.detect(image, keypoints);
-	if (keypoints.size() == 0){
-		glutSetWindow(win);
-		return;
-	}
-	cv::SurfDescriptorExtractor extractor;
-	extractor.compute(image, keypoints, descriptors);
-
-	glutSetWindow(win);
-}
-
-void FlannMatching(cv::Mat &descriptors1, cv::Mat &descriptors2, std::vector<cv::DMatch> &matches)
-{
-	int win = glutGetWindow();
-	cv::FlannBasedMatcher matcher;
-	if (descriptors1.type() != CV_32F)
-		descriptors1.convertTo(descriptors1, CV_32F);
-	if (descriptors2.type() != CV_32F)
-		descriptors2.convertTo(descriptors2, CV_32F);
-	matcher.match(descriptors1, descriptors2, matches);
-	glutSetWindow(win);
-}
-
 void OpticalFlow(cv::Mat &prevFrame, cv::Mat &currFrame, std::vector<cv::Point2f> &prevFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapGoodMatches, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches)
 {
 	//For PoseEsitmation by homography
@@ -317,25 +114,84 @@ void OpticalFlow(cv::Mat &prevFrame, cv::Mat &currFrame, std::vector<cv::Point2f
 	std::vector<float>().swap(error);
 }
 
-bool FeatureDetection(unsigned int minHessian, Frame &currFrame, cv::Mat &currFrameImg)
+/*								*/
+/*	Remove the false matching	*/
+/*								*/
+void FindGoodMatches(FeatureMap &featureMap, cv::Mat &currFrame, std::vector<cv::KeyPoint> &keypoints_frame, std::vector<cv::DMatch> &matches, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches)
 {
-	SurfDetection(currFrameImg, currFrame.keypoints, currFrame.descriptors, minHessian);
-	if (currFrame.keypoints.size() == 0)
-		return false;
-	return true;
+	//This method is to delete the feature points which are multimatch
+	//傳入currFrame做DEBUG用
+
+	std::vector<cv::DMatch> goodMatches;
+	//	Quick calcul ation of max and min distances between keypoints
+	double max_dist = 0; double min_dist = 100;
+	for (std::vector<cv::DMatch>::size_type i = 0; i < matches.size(); i++)
+	{
+		double dist = (double)(matches[i].distance);
+		if (dist < min_dist) min_dist = dist;
+		if (dist > max_dist) max_dist = dist;
+	}
+	cout << "(max, min) : (" << max_dist << ", " << min_dist << ")\n\n";
+	//DebugOpenCVMarkPoint(frame, keypoints_frame, "inputFrame.jpg");
+	//	Find the good matches
+	min_dist *= 2.0;
+	if (min_dist > 0.2)
+		min_dist = 0.2;
+	for (std::vector<cv::DMatch>::size_type i = 0; i < matches.size(); i++)
+	{
+		double dist = (double)(matches[i].distance);
+		if (dist < min_dist)
+			goodMatches.push_back(matches[i]);
+	}
+	//標記一對多的點為false-> goodMatches
+	std::vector<bool> GoodMatchesFlag(goodMatches.size(), true);	//判斷Surf算出來的點
+
+	for (std::size_t j = 0; j < goodMatches.size(); j++)
+	{
+		std::size_t index = j;	//紀錄distance較小的index
+		double distance = goodMatches[index].distance;
+		if (!GoodMatchesFlag[index])
+			continue;
+		for (std::size_t k = j + 1; k < goodMatches.size(); k++)
+		{
+			if (!GoodMatchesFlag[k])
+				continue;
+			if (goodMatches[index].trainIdx == goodMatches[k].trainIdx)
+			{
+				if (distance <= goodMatches[k].distance)
+					GoodMatchesFlag[k] = false;
+				else
+				{
+					GoodMatchesFlag[index] = false;
+					index = k;
+					distance = goodMatches[index].distance;
+				}
+			}
+		}
+	}
+	//DebugOpenCVMatchPoint(featureMap.image, featureMap.keypoints, frame.image, frame.keypoints, goodMatches, "IMG1.JPG");
+	//把標記為true的點放入featureMap_goodMatches & frame_goodMatches
+	for (std::size_t i = 0; i < goodMatches.size(); i++)
+	{
+		if (GoodMatchesFlag[i])
+		{
+			featureMapGoodMatches.push_back(featureMap.keypoints[goodMatches[i].queryIdx].pt);
+			frameGoodMatches.push_back(keypoints_frame[goodMatches[i].trainIdx].pt);
+		}
+	}
 }
 
-bool FeatureMatching(FeatureMap &featureMap, Frame &currFrame, cv::Mat &currFrameImg, cv::Mat &prevFrameImg, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
+bool FeatureMatching(FeatureMap &featureMap, FrameMetaData &currData, cv::Mat &currFrameImg, cv::Mat &prevFrameImg, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
 {
-	//Camera captures the marker
+	//Matching with the featureMap
 
 	std::vector<cv::DMatch> matches;
-	FlannMatching(featureMap.descriptors, currFrame.descriptors, matches);
-	FindGoodMatches(featureMap, currFrameImg, currFrame.keypoints, matches, featureMapGoodMatches, currFrameGoodMatches);
+	FlannMatching(featureMap.descriptors, currData.descriptors, matches);
+	FindGoodMatches(featureMap, currFrameImg, currData.keypoints, matches, featureMapGoodMatches, currFrameGoodMatches);
 	//cout << "Surf Good Matches Size : " << currFrameGoodMatches.size() << std::endl;
 
-	bool usingOpticalFlow = false;
 	//GoodMatches size is not enough
+	bool usingOpticalFlow = false;
 	if ((int)currFrameGoodMatches.size() < 25)
 	{
 		if (prevFrameInliers.size() != 0 && prevFeatureMapInliers.size() != 0 && prevFrameImg.data != NULL)
@@ -349,56 +205,111 @@ bool FeatureMatching(FeatureMap &featureMap, Frame &currFrame, cv::Mat &currFram
 			prevFeatureMapInliers.swap(featureMapGoodMatches);
 			prevFrameInliers.swap(currFrameGoodMatches);
 
-			std::vector<cv::DMatch>().swap(matches);
-			std::vector<cv::KeyPoint>().swap(currFrame.keypoints);
-			std::vector<cv::Point2f>().swap(featureMapGoodMatches);
-			std::vector<cv::Point2f>().swap(currFrameGoodMatches);
-
+			//std::vector<cv::DMatch>().swap(matches);
+			//std::vector<cv::KeyPoint>().swap(currData.keypoints);
+			//std::vector<cv::Point2f>().swap(featureMapGoodMatches);
+			//std::vector<cv::Point2f>().swap(currFrameGoodMatches);
 			return false;
 		}
 	}
 
 	if (usingOpticalFlow)
 	{
-		RemoveOverlappingPts(featureMapGoodMatches, currFrameGoodMatches);
+		RemoveDuplicatePts(featureMapGoodMatches, currFrameGoodMatches);
 		//cout << "Surf + OpticalFlow Good Matches Size : " << currFrameGoodMatches.size() << std::endl;
 		if ((int)currFrameGoodMatches.size() < 30)
 		{
-			std::vector<cv::DMatch>().swap(matches);
-			std::vector<cv::KeyPoint>().swap(currFrame.keypoints);
+			//std::vector<cv::DMatch>().swap(matches);
+			/*std::vector<cv::KeyPoint>().swap(currData.keypoints);
 			std::vector<cv::Point2f>().swap(featureMapGoodMatches);
 			std::vector<cv::Point2f>().swap(currFrameGoodMatches);
+			*/
 			return false;
 		}
 	}
 
-	std::vector<cv::DMatch>().swap(matches);
+	//std::vector<cv::DMatch>().swap(matches);
 	return true;
 }
 
-bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame &currFrame, cv::Mat &currFrameImg, std::vector<int> &goodKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
+void FindGoodMatches(std::vector<cv::DMatch> &matches, std::vector<cv::DMatch> &goodMatches)
 {
-	//For SolvePnPRansac
-	if (keyFrames.size() < 2)	return false;
-	std::vector<cv::DMatch> matches;
-	//這邊有BUG, currFrame的R,t都不知道
-	//需要用prevFrame的R,t來計算
-	FindMatchedKeyFrames(cameraPara, keyFrames, currFrame, goodKeyFrameIdx);
-	if (goodKeyFrameIdx.size() == 0)
-		return false;
-	goodMatchesSet.resize(goodKeyFrameIdx.size());
-	for (std::size_t i = 0; i < goodKeyFrameIdx.size(); ++i)
+	double max_dist = 0; double min_dist = 100;
+	for (std::vector<cv::DMatch>::size_type i = 0; i < matches.size(); i++)
 	{
-		std::vector<cv::DMatch> matches;
-		/*cv::Mat descriptors(keyFrames[goodKeyFrameIdx[i]].coresIdx.size(), keyFrames[goodKeyFrameIdx[i]].descriptors.cols, CV_32F);
-		int index = 0;
-		for (std::size_t j = 0; j < keyFrames[goodKeyFrameIdx[i]].coresIdx.size(); ++j)
+		double dist = (double)(matches[i].distance);
+		if (dist < min_dist) min_dist = dist;
+		if (dist > max_dist) max_dist = dist;
+	}
+
+	//	Find the good matches
+	min_dist *= 2.0;
+	if (min_dist > 0.2) min_dist = 0.2;
+	for (std::vector<cv::DMatch>::size_type i = 0; i < matches.size(); i++)
+	{
+		double dist = (double)(matches[i].distance);
+		if (dist < min_dist)
+			goodMatches.push_back(matches[i]);
+	}
+
+	//標記一對多的點為false-> goodMatches
+	std::vector<bool> GoodMatchesFlag(goodMatches.size(), true);
+	for (std::size_t j = 0; j < goodMatches.size(); j++)
+	{
+		std::size_t index = j;	//紀錄distance較小的index
+		double distance = goodMatches[index].distance;
+		if (!GoodMatchesFlag[index])
+			continue;
+		for (std::size_t k = j + 1; k < goodMatches.size(); k++)
 		{
-			keyFrames[goodKeyFrameIdx[i]].descriptors.row(keyFrames[goodKeyFrameIdx[i]].coresIdx[j]).copyTo(descriptors.row(index));
-			++index;
-		}*/
-		//FlannMatching(keyFrames[goodKeyFrameIdx[i]].descriptors_3D, currFrame.descriptors, matches);
-		FindGoodMatches(matches, goodMatchesSet[i]);
+			if (!GoodMatchesFlag[k])
+				continue;
+			if (goodMatches[index].trainIdx == goodMatches[k].trainIdx)
+			{
+				if (distance <= goodMatches[k].distance)
+					GoodMatchesFlag[k] = false;
+				else
+				{
+					GoodMatchesFlag[index] = false;
+					index = k;
+					distance = goodMatches[index].distance;
+				}
+			}
+		}
+	}
+}
+
+
+bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, FrameMetaData &currData, cv::Mat &currFrameImg, std::vector<int> &neighboringKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
+{
+	/* When move the camera to the place where are without the featureMap                   */
+	/* We use the last keyframe to find the keyframes which are neighbor with last keyframe */
+	/* Use these 3d point constructed by these keyframes to estimate our camera pose(PnP)   */
+
+	if (keyFrames.size() < 2)	return false;
+
+	FindNeighboringKeyFrames(keyFrames, currData, neighboringKeyFrameIdx);
+	if (neighboringKeyFrameIdx.size() == 0)	return false;
+	//std::vector< vector<cv::DMatch> > 
+	for (std::vector<int>::iterator it = neighboringKeyFrameIdx.begin(); it != neighboringKeyFrameIdx.end(); ++it)
+	{
+		int r3dPtsCount = keyFrames[*it].coresIdx.size();
+		cv::Mat descriptors(r3dPtsCount, currData.descriptors.cols, currData.descriptors.type());
+		for (int i = 0; i < r3dPtsCount; ++i)
+		{
+			keyFrames[*it].descriptors.row(i).copyTo(descriptors.row(i));
+		}
+		std::vector<cv::DMatch> matches, goodMatches;
+		FlannMatching(currData.descriptors, descriptors, matches);
+		FindGoodMatches(matches, goodMatches);
+		goodMatchesSet.push_back(goodMatches);
 	}
 	return true;
+}
+
+void FeatureMatching(KeyFrame &query, KeyFrame &train, std::vector<cv::DMatch> &goodMatches)
+{
+	std::vector<cv::DMatch> matches;
+	FlannMatching(query.descriptors, train.descriptors, matches);
+	FindGoodMatches(matches, goodMatches);
 }

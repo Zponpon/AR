@@ -1,14 +1,16 @@
 #include <iostream>
 #include <vector>
+#include <iterator>
 #include "Matrix\MyMatrix.h"
 #include "BasicType.h"
 #include "SFMUtil.h"
 #include <math.h>
-//#include "FundamentalMatrix\FundMatrix.h"
 #include "PoseEstimation.h"
 #include "FeatureProcess.h"
 #include "MathLib\MathLib.h"
 #include "levmar.h"
+
+static vector<SFM_Feature> SFM_Features;
 //For two views case
 bool ReProjectToImage(MyMatrix &P, const cv::Point2f &pt, cv::Point3d &r3DPt)
 {
@@ -514,89 +516,184 @@ double EstimateFocalLength(MyMatrix &F, double u0, double v0, double u1, double 
 	return sqrt(-f1.m_lpdEntries[0] / f2.m_lpdEntries[0]);
 }
 
-void Triangulation(KeyFrame &KF1, KeyFrame &KF2, double *cameraPara)
+void UpdateSFM_Features(KeyFrame &query, int imgIdx1, KeyFrame &train, int imgIdx2, std::vector<cv::DMatch> &goodMatches)
 {
-	std::vector<cv::DMatch> matches;
-	std::vector<cv::Point2f> KF1GoodMatches, KF2GoodMatches;
-	std::vector<int> goodPts3DIdx;
-	std::vector<cv::Point3d> pts3D;
-	std::vector<cv::KeyPoint> keypointsMatches[2];
-	cv::Mat descriptorsMatches[2];
-	FlannMatching(KF1.descriptors, KF2.descriptors, matches);
-	//FindGoodMatches(KF1, KF2, matches, KF1GoodMatches, KF2GoodMatches, keypointsMatches, descriptorsMatches);
-	if (KF1GoodMatches.size() == 0)
-		return;
+	int pos1 = -1, pos2 = -1;
 
-	/*MyMatrix K(3, 3);
-	MyMatrix projMatrix1(3, 4), projMatrix2(3, 4);
-	for (int i = 0; i < 9; ++i)
-		K.m_lpdEntries[i] = cameraPara[i];
-	CreateProjMatrix(K, KF1.R, KF1.t, projMatrix1);
-	CreateProjMatrix(K, KF2.R, KF2.t, projMatrix2);*/
-
-	for (int i = 0; i < KF1GoodMatches.size(); ++i)
+	for (vector<cv::DMatch>::size_type i = 0; i<goodMatches.size(); i++)	//比對成功的大小
 	{
-		//Triangulate
-		cv::Point3d pt3D;
-		if (Find3DCoordinates(KF1.projMatrix, KF2.projMatrix,
-			KF1GoodMatches[i], KF2GoodMatches[i], pt3D))
+		if (goodMatches[i].queryIdx >= 0 && goodMatches[i].trainIdx >= 0)	//比對成功條件(queryIdx>=0,trainIdx>=0)
 		{
-			pts3D.push_back(pt3D);
-			goodPts3DIdx.push_back(i);
+			pos1 = -1;
+			pos2 = -1;
+			cv::KeyPoint key1 = query.keypoints[goodMatches[i].queryIdx];	//第一張影像的查詢點
+			cv::KeyPoint key2 = train.keypoints[goodMatches[i].trainIdx];	//第二張影像的訓練點
+			//都!=-1表示已經存在
+			for (vector<SFM_Feature>::size_type j = 0; j<SFM_Features.size(); j++)	//SFM的大小
+			{
+				if (pos1 == -1 && SFM_Features[j].imgIdx == imgIdx1 && SFM_Features[j].pt.x == key1.pt.x && SFM_Features[j].pt.y == key1.pt.y)	//pos1=-1, sfm_imgIdx=imagefeature_imgIdx1, sfmfeature=key1
+				{
+					pos1 = j;
+					if (pos2 != -1) break;
+				}
+				if (pos2 == -1 && SFM_Features[j].imgIdx == imgIdx2 && SFM_Features[j].pt.x == key2.pt.x && SFM_Features[j].pt.y == key2.pt.y)	//pos2=-1, sfm_imgIdx=imagefeature_imgIdx2, sfmfeature=key2
+				{
+					pos2 = j;
+					if (pos1 != -1) break;
+				}
+			}
+			if (pos1 == -1 && pos2 != -1)
+			{
+				// Insert the feature into the array
+				SFM_Feature feature;
+				feature.imgIdx = imgIdx1;
+				feature.isValid = true;
+				feature.pt.x = key1.pt.x;
+				feature.pt.y = key1.pt.y;
+				feature.descriptorIdx = goodMatches[i].queryIdx;
+
+				SFM_Features.push_back(feature);
+
+				// update the cores field
+				int SFM_FeatureSize = SFM_Features.size();
+				for (vector<int>::size_type j = 0; j < SFM_Features[pos2].cores.size(); j++)
+				{
+					int index = SFM_Features[pos2].cores[j];	//已存在SFM的匹配點index
+					//n-1<=>index
+					SFM_Features[SFM_FeatureSize - 1].cores.push_back(index);
+					SFM_Features[index].cores.push_back(SFM_FeatureSize - 1);
+				}
+				//n-1<=>pos2
+				SFM_Features[SFM_FeatureSize - 1].cores.push_back(pos2);
+				SFM_Features[pos2].cores.push_back(SFM_FeatureSize - 1);
+			}
+
+			if (pos1 != -1 && pos2 == -1)
+			{
+				// Insert the feature into the array
+				SFM_Feature feature;
+				feature.imgIdx = imgIdx2;
+				feature.isValid = true;
+				feature.pt.x = key2.pt.x;
+				feature.pt.y = key2.pt.y;
+				feature.descriptorIdx = goodMatches[i].trainIdx;
+
+				SFM_Features.push_back(feature);
+
+				// update the cores field
+				int SFM_FeatureSize = SFM_Features.size();
+				for (size_t j = 0; j < SFM_Features[pos1].cores.size(); j++)
+				{
+					int index = SFM_Features[pos1].cores[j];	//已存在SFM的匹配點index
+					//n-1<=>index
+					SFM_Features[SFM_FeatureSize - 1].cores.push_back(index);
+					SFM_Features[index].cores.push_back(SFM_FeatureSize - 1);
+				}
+				//n-1<=>pos2
+				SFM_Features[SFM_FeatureSize - 1].cores.push_back(pos1);
+				SFM_Features[pos1].cores.push_back(SFM_FeatureSize - 1);
+			}
+
+			if (pos1 == -1 && pos2 == -1) // new correspondence
+			{
+				// Insert the two features into the array
+				SFM_Feature feature;
+
+				feature.imgIdx = imgIdx1;
+				feature.isValid = true;
+				feature.pt.x = key1.pt.x;
+				feature.pt.y = key1.pt.y;
+				feature.descriptorIdx = goodMatches[i].queryIdx;
+				SFM_Features.push_back(feature);
+
+				feature.imgIdx = imgIdx2;
+				feature.isValid = true;
+				feature.pt.x = key2.pt.x;
+				feature.pt.y = key2.pt.y;
+				feature.descriptorIdx = goodMatches[i].trainIdx;
+				SFM_Features.push_back(feature);
+
+				// update the cores field
+				int SFM_FeatureSize = SFM_Features.size();
+				//n-1<=>n-2
+				SFM_Features[SFM_FeatureSize - 2].cores.push_back(SFM_FeatureSize - 1);
+				SFM_Features[SFM_FeatureSize - 1].cores.push_back(SFM_FeatureSize - 2);
+			}
 		}
 	}
-	for (int i = 0; i < pts3D.size(); ++i)
-	{
-		if ((pts3D[i].x > 400.0 || pts3D[i].x < -400.0
-			|| pts3D[i].y > 300.0 || pts3D[i].y < -300.0))
-		{
-			KF1.r3dPts.push_back(pts3D[i]);
-			KF2.r3dPts.push_back(pts3D[i]);
-		}
-		else
-			goodPts3DIdx[i] = -1;
-	}
-	//initialize
-	if (KF1.descriptors_3D.rows != 0 || KF1.descriptors_3D.cols != 0)
-		KF1.descriptors_3D.create(KF1.r3dPts.size(), descriptorsMatches[0].cols, descriptorsMatches[0].type());
-	if (KF2.descriptors_3D.rows != 0 || KF2.descriptors_3D.cols != 0)
-		KF2.descriptors_3D.create(KF2.r3dPts.size(), descriptorsMatches[1].cols, descriptorsMatches[1].type());
-	for (std::size_t i = 0, j = 0; i < goodPts3DIdx.size(); ++i)
-	{
-		if (goodPts3DIdx[i] != -1)
-		{
-			/*KF1.keypoints_3D.push_back(keypointsMatches[0][goodPts3DIdx[i]]);
-			KF2.keypoints_3D.push_back(keypointsMatches[1][goodPts3DIdx[i]]);
-			descriptorsMatches[0].row(goodPts3DIdx[i]).copyTo(KF1.descriptors_3D.row(j));
-			descriptorsMatches[1].row(goodPts3DIdx[i]).copyTo(KF2.descriptors_3D.row(j));*/
-			++j;
-		}
-	}
-
-	/*std::vector<int>().swap(goodPts3DIdx);
-	std::vector<cv::KeyPoint>().swap(keypointsMatches[0]);
-	std::vector<cv::KeyPoint>().swap(keypointsMatches[1]);
-	std::vector<cv::DMatch>  ().swap(matches);
-	std::vector<cv::Point3d> ().swap(pts3D);*/
 }
 
-void Triangulation(double *cameraPara, std::vector<KeyFrame> &keyFrames, std::vector<int> &goodKeyFrameIdx)
+void RemoveOutlier(KeyFrame &query, KeyFrame &train, std::vector<cv::DMatch> &goodMatches)
 {
-	//std::vector<KeyFrame> matchedKFs;
-	
-	for (std::size_t i = 0; i < goodKeyFrameIdx.size(); ++i)
+	int ptCount = (int)goodMatches.size();
+	if (ptCount > 16)	return;
+
+	cv::Mat F, mask;
+	std::vector<cv::Point2f> queryPts, trainPts;
+	for (std::vector<cv::DMatch>::iterator it = goodMatches.begin(); it != goodMatches.end(); ++it)
 	{
-		keyFrames[goodKeyFrameIdx[i]].r3dPts.clear();
-		keyFrames[goodKeyFrameIdx[i]].keypoints_3D.clear();
-		keyFrames[goodKeyFrameIdx[i]].descriptors_3D.release();
+		queryPts.push_back(query.keypoints[it->queryIdx].pt);
+		trainPts.push_back(train.keypoints[it->trainIdx].pt);
 	}
-	goodKeyFrameIdx.push_back(keyFrames.size() - 1);
-	for (std::size_t i = 0; i < goodKeyFrameIdx.size(); ++i)
+	F = cv::findFundamentalMat(queryPts, trainPts, CV_FM_RANSAC, 1.3, 0.99, mask);
+	for (int i = 0; i < ptCount; ++i)
 	{
-		for (std::size_t j = i + 1; j < goodKeyFrameIdx.size(); ++j)
+		if (mask.at<uchar>(i))
 		{
-			std::vector<cv::DMatch> matches;
-			FlannMatching(keyFrames[goodKeyFrameIdx[i]].descriptors, keyFrames[goodKeyFrameIdx[j]].descriptors, matches);
+			goodMatches[i].queryIdx = -1;
+			goodMatches[i].trainIdx = -1;
 		}
 	}
+}
+
+void EstablishImageCorrespondences(std::vector<KeyFrame> &keyFrames)
+{
+	int imgIdx1 = 0, imgIdx2 = 1;
+	for (std::vector<KeyFrame>::iterator query = keyFrames.begin(); query != keyFrames.end(); ++query)
+	{
+		++query;
+		for (std::vector<KeyFrame>::iterator train = query; train != keyFrames.end(); ++train)
+		{
+			vector<cv::DMatch> goodMatches;
+			FeatureMatching(*query, *train, goodMatches);
+			RemoveOutlier(*query, *train, goodMatches);
+			UpdateSFM_Features(*query, imgIdx1, *train, imgIdx2++, goodMatches);
+		}
+		--query;
+		imgIdx1++;
+		imgIdx2 = imgIdx1 + 1;
+	}
+}
+
+void Triangulation(double *cameraPara, std::vector<KeyFrame> &keyFrames)
+{
+	//Another thread
+
+	cout << "Starting triangulation\n";
+	vector<cv::Point3d> r3dPts;
+	EstablishImageCorrespondences(keyFrames);
+
+	//Reconstruction process of 3d points
+	for (vector<SFM_Feature>::iterator it = SFM_Features.begin(); it != SFM_Features.end(); ++it)
+	{
+		vector<cv::Point2f> pts;
+		vector<MyMatrix> PMs;
+		vector<int> coresImgIdx(1, it->imgIdx);
+		for (std::size_t i = 0; i < it->cores.size(); ++i)
+		{
+			pts.push_back(SFM_Features[it->cores[i]].pt);
+			PMs.push_back(keyFrames[SFM_Features[it->cores[i]].imgIdx].projMatrix);
+			coresImgIdx.push_back(SFM_Features[it->cores[i]].imgIdx);
+		}
+		cv::Point3d r3dPt;
+		if (Find3DCoordinates(PMs, pts, r3dPt))
+		{
+			for (std::size_t j = 0; j < coresImgIdx.size(); ++j)
+			{
+				keyFrames[j].r3dPts.push_back(r3dPt);
+				keyFrames[SFM_Features[it->cores[j]].imgIdx].coresIdx.push_back(SFM_Features[it->cores[j]].ptIdx);
+			}
+		}
+	}
+	//BundleAdjustment();
 }
