@@ -665,9 +665,14 @@ void EstablishImageCorrespondences(std::vector<KeyFrame> &keyFrames)
 	}
 }
 
+void BundleAdjustment(std::vector<KeyFrame> &keyFrames)
+{
+	//We do global or local optimization here
+}
+
 void Triangulation(double *cameraPara, std::vector<KeyFrame> &keyFrames)
 {
-	//Another thread
+	//This process is done by another thread
 
 	cout << "Starting triangulation\n";
 	vector<cv::Point3d> r3dPts;

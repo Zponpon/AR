@@ -7,15 +7,19 @@ static vector<cv::Point2f> prevFrameInliers, prevFeatureMapInliers;
 static vector<FrameMetaData> frameMetaDatas;
 static vector<FeatureMap> featureMaps;
 static vector<KeyFrame> keyFrames;
+static std::thread Optimization;
 
-
+/*
 void LoadFeatureMap(int argc, char *argv[])
 {
 	//Loading featureMap
 }
+*/
 
 bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat &prevFrameMat, cv::Mat &currFrameMat)
 {
+	if (Optimization.joinable())
+		Optimization.join();
 	FrameMetaData currData;
 	if (!FeatureDetection(3000, currData, currFrameMat)) return false;
 
@@ -37,9 +41,9 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 	if (KeyFrameSelection(keyFrames, currData))
 	{
 		CreateKeyFrame(cameraPara, currData, currFrameMat, keyFrames);
-		//std::thread thread1(Triangulation, cameraPara, keyFrames);
-		//thread1.join();
-		//Optimization
+		Optimization = std::thread(Triangulation, cameraPara, ref(keyFrames));
+		Optimization.detach();
+		//Optimization(Bundle Adjustment)
 	}
 	frameMetaDatas.push_back(currData);
 	return true;
