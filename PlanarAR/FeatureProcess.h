@@ -1,4 +1,4 @@
-#ifndef  FEATUREPROCESS_H
+#ifndef FEATUREPROCESS_H
 #define FEATUREPROCESS_H
 
 #include <iostream>

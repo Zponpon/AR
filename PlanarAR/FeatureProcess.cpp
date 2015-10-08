@@ -79,7 +79,7 @@ void RemoveDuplicatePts(std::vector<cv::Point2f> &featureMapGoodMatches, std::ve
 
 void OpticalFlow(cv::Mat &prevFrame, cv::Mat &currFrame, std::vector<cv::Point2f> &prevFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapGoodMatches, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches)
 {
-	//For PoseEsitmation by homography
+	//Add more feature points
 	int GoodSize = 0;
 	std::vector<cv::Point2f> GoodMatches[2]; //[0]->preFeatureMap, [1]->prevFrame, store the feature points
 	std::vector<uchar> status;	//record OpticalPyrLK keypoints which are right tracking
@@ -91,9 +91,7 @@ void OpticalFlow(cv::Mat &prevFrame, cv::Mat &currFrame, std::vector<cv::Point2f
 
 	for (std::size_t i = 0; i < OpticalFlow_keypoints.size(); ++i)
 	{
-		//兩張圖error門檻值取大於30都不錯
-		//error似乎只是判斷有無值可以用(cv::norm(OpticalFlow_keypoints[i] - prevFeatureMapGoodMatches[i]) < 5))
-		//根據這部分code來設定threshold https://github.com/Itseez/opencv/blob/master/samples/cpp/lkdemo.cpp/
+		//根據這個code來設定threshold https://github.com/Itseez/opencv/blob/master/samples/cpp/lkdemo.cpp/
 		if (!(status[i] == 0 || (cv::norm(OpticalFlow_keypoints[i] - prevFeatureMapGoodMatches[i]) <= 5)))	//目前為經驗法則
 		{
 			GoodMatches[0].push_back(prevFeatureMapGoodMatches[i]);//避免拍到不是target image時，依舊保留上一個frame的特徵點
@@ -106,12 +104,15 @@ void OpticalFlow(cv::Mat &prevFrame, cv::Mat &currFrame, std::vector<cv::Point2f
 	prevFeatureMapGoodMatches.swap(GoodMatches[0]);
 	prevFrameGoodMatches.swap(GoodMatches[1]);
 	cout << "OpticalFlow Size : " << GoodSize << endl;
+	/*
 
 	std::vector<cv::Point2f>().swap(GoodMatches[0]);
 	std::vector<cv::Point2f>().swap(GoodMatches[1]);
 	std::vector<cv::Point2f>().swap(OpticalFlow_keypoints);
 	std::vector<uchar>().swap(status);
 	std::vector<float>().swap(error);
+
+	*/
 }
 
 /*								*/
@@ -277,39 +278,70 @@ void FindGoodMatches(std::vector<cv::DMatch> &matches, std::vector<cv::DMatch> &
 			}
 		}
 	}
+	std::vector<cv::DMatch> tmp;
+	for (std::size_t i = 0; i < goodMatches.size(); i++)
+	{
+		if (GoodMatchesFlag[i])
+			tmp.push_back(goodMatches[i]);
+	}
+	goodMatches.swap(tmp);
 }
 
 
 bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, FrameMetaData &currData, cv::Mat &currFrameImg, std::vector<int> &neighboringKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
 {
-	/* When move the camera to the place where are without the featureMap                   */
-	/* We use the last keyframe to find the keyframes which are neighbor with last keyframe */
-	/* Use these 3d point constructed by these keyframes to estimate our camera pose(PnP)   */
+	/* When we move the camera to the place where are without the featureMap                  */
+	/* We use the last keyframe to find the neighboring keyframes in the keyframe set         */
+	/* Use these 3d points constructed by keyframes we found to estimate our camera pose(PnP) */
 
-	if (keyFrames.size() < 2)	return false;
-
+	cout << "Start matching scene with keyframes.\n";
+	if (keyFrames.size() < 2)
+	{
+		cout << "KeyFrames size < 2\n";
+		return false;
+	}
 	FindNeighboringKeyFrames(keyFrames, currData, neighboringKeyFrameIdx);
-	if (neighboringKeyFrameIdx.size() == 0)	return false;
-	//std::vector< vector<cv::DMatch> > 
+	if (neighboringKeyFrameIdx.size() == 0)
+	{
+		cout << "Neighboring keyframe size is zero.\n";
+		return false;
+	}
+	//std::vector< vector<cv:6:DMatch> > 
 	for (std::vector<int>::iterator it = neighboringKeyFrameIdx.begin(); it != neighboringKeyFrameIdx.end(); ++it)
 	{
-		int r3dPtsCount = keyFrames[*it].coresIdx.size();
-		cv::Mat descriptors(r3dPtsCount, currData.descriptors.cols, currData.descriptors.type());
+		int r3dPtsCount = (int)keyFrames[*it].coresIdx.size();
+		if (r3dPtsCount == 0) return false;
+		/*
+
+		cout << "Size : " << r3dPtsCount << endl;
 		for (int i = 0; i < r3dPtsCount; ++i)
 		{
-			keyFrames[*it].descriptors.row(i).copyTo(descriptors.row(i));
+			cout << keyFrames[*it].coresIdx[i] << endl;
+		}
+		
+		*/
+		cv::Mat descriptors(r3dPtsCount, currData.descriptors.cols, currData.descriptors.type());
+		cout << "Neighboring row" << keyFrames[*it].descriptors.rows << endl;
+		for (int i = 0; i < r3dPtsCount; ++i)
+		{
+			keyFrames[*it].descriptors.row(keyFrames[*it].coresIdx[i]).copyTo(descriptors.row(i));
 		}
 		std::vector<cv::DMatch> matches, goodMatches;
 		FlannMatching(currData.descriptors, descriptors, matches);
 		FindGoodMatches(matches, goodMatches);
 		goodMatchesSet.push_back(goodMatches);
 	}
+	cout << "Matching scene with keyframes is end.\n";
 	return true;
 }
 
 void FeatureMatching(KeyFrame &query, KeyFrame &train, std::vector<cv::DMatch> &goodMatches)
 {
+	//Triangulation
+	cout << "Start Triangulation matching.\n";
 	std::vector<cv::DMatch> matches;
 	FlannMatching(query.descriptors, train.descriptors, matches);
+	cout << "Matches size : "<< matches.size() << endl;
 	FindGoodMatches(matches, goodMatches);
+	cout << "Triangulation mathcing is end.\n";
 }

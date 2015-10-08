@@ -13,12 +13,13 @@ class SFM_Feature
 {
 public:
 	bool isValid; // indicates whether this point is reliable or not
+	bool find3d; // indicates whether this point finds its 3d points or not
 	cv::Point2f pt; // coordinates of image feature
 	int imgIdx;  // index of image on which the point lies
 	int ptIdx; // index of corresponding 3D point
 	int descriptorIdx; // index of feature descriptor array
 	std::vector<int> cores; // index of correspondences in other views
-	SFM_Feature() : isValid(false), imgIdx(-1), ptIdx(-1)
+	SFM_Feature() : isValid(false), find3d(false), imgIdx(-1), ptIdx(-1)
 	{
 	}
 };

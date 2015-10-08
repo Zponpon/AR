@@ -16,7 +16,7 @@ public:
 	std::vector<cv::KeyPoint> keypoints;
 	cv::Mat descriptors;
 	clock_t timeStamp;
-	char state[1];
+	char state;
 	MyMatrix R;
 	Vector3d t;
 };

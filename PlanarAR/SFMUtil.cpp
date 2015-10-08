@@ -1,10 +1,10 @@
 #include <iostream>
 #include <vector>
+#include <math.h>
 #include <iterator>
 #include "Matrix\MyMatrix.h"
 #include "BasicType.h"
 #include "SFMUtil.h"
-#include <math.h>
 #include "PoseEstimation.h"
 #include "FeatureProcess.h"
 #include "MathLib\MathLib.h"
@@ -625,6 +625,7 @@ void UpdateSFM_Features(KeyFrame &query, int imgIdx1, KeyFrame &train, int imgId
 
 void RemoveOutlier(KeyFrame &query, KeyFrame &train, std::vector<cv::DMatch> &goodMatches)
 {
+	cout << "Starting remove outlier(keyframes)\n";
 	int ptCount = (int)goodMatches.size();
 	if (ptCount > 16)	return;
 
@@ -638,28 +639,40 @@ void RemoveOutlier(KeyFrame &query, KeyFrame &train, std::vector<cv::DMatch> &go
 	F = cv::findFundamentalMat(queryPts, trainPts, CV_FM_RANSAC, 1.3, 0.99, mask);
 	for (int i = 0; i < ptCount; ++i)
 	{
-		if (mask.at<uchar>(i))
+		if (mask.at<uchar>(i) == 0)
 		{
 			goodMatches[i].queryIdx = -1;
 			goodMatches[i].trainIdx = -1;
 		}
 	}
+	cout << "Remove outlier is end.\n";
 }
 
 void EstablishImageCorrespondences(std::vector<KeyFrame> &keyFrames)
 {
 	int imgIdx1 = 0, imgIdx2 = 1;
-	for (std::vector<KeyFrame>::iterator query = keyFrames.begin(); query != keyFrames.end(); ++query)
+	cout << keyFrames.size() << endl;
+	//for (std::vector<KeyFrame>::iterator query = keyFrames.begin(); query != keyFrames.end(); ++query)
+	for (std::vector<KeyFrame>::size_type i = 0; i < keyFrames.size(); ++i)
 	{
-		++query;
-		for (std::vector<KeyFrame>::iterator train = query; train != keyFrames.end(); ++train)
+		//query++;
+		//for (std::vector<KeyFrame>::iterator train = query; train != keyFrames.end(); ++train)
+		for (std::vector<KeyFrame>::size_type j = i + 1; j < keyFrames.size(); ++j)
 		{
 			vector<cv::DMatch> goodMatches;
-			FeatureMatching(*query, *train, goodMatches);
-			RemoveOutlier(*query, *train, goodMatches);
-			UpdateSFM_Features(*query, imgIdx1, *train, imgIdx2++, goodMatches);
+			/*cout << "Query descriptor row : " << query->descriptors.rows << endl;
+			cout << "Trian descriptor row : " << train->descriptors.rows << endl;*/
+			FeatureMatching(keyFrames[i], keyFrames[j], goodMatches);
+			//cout << "Good matches size : " << goodMatches.size() << endl;
+			if (goodMatches.size() == 0)
+			{
+				imgIdx2++;
+				continue;
+			}
+			RemoveOutlier(keyFrames[i], keyFrames[j], goodMatches);
+			UpdateSFM_Features(keyFrames[i], imgIdx1, keyFrames[j], imgIdx2++, goodMatches);
 		}
-		--query;
+		//query--;
 		imgIdx1++;
 		imgIdx2 = imgIdx1 + 1;
 	}
@@ -673,32 +686,53 @@ void BundleAdjustment(std::vector<KeyFrame> &keyFrames)
 void Triangulation(double *cameraPara, std::vector<KeyFrame> &keyFrames)
 {
 	//This process is done by another thread
-
-	cout << "Starting triangulation\n";
+	int size = (int)keyFrames.size();
+	if (size < 2) return;
+	cout << "Starting triangulation.\n";
 	vector<cv::Point3d> r3dPts;
 	EstablishImageCorrespondences(keyFrames);
 
 	//Reconstruction process of 3d points
 	for (vector<SFM_Feature>::iterator it = SFM_Features.begin(); it != SFM_Features.end(); ++it)
 	{
-		vector<cv::Point2f> pts;
-		vector<MyMatrix> PMs;
+		if (!it->isValid && it->find3d)
+			continue;
+		vector<cv::Point2f> pts(1, it->pt);
+		vector<MyMatrix> PMs(1, keyFrames[it->imgIdx].projMatrix);
 		vector<int> coresImgIdx(1, it->imgIdx);
+		it->find3d = true;
 		for (std::size_t i = 0; i < it->cores.size(); ++i)
 		{
-			pts.push_back(SFM_Features[it->cores[i]].pt);
-			PMs.push_back(keyFrames[SFM_Features[it->cores[i]].imgIdx].projMatrix);
-			coresImgIdx.push_back(SFM_Features[it->cores[i]].imgIdx);
+			if (SFM_Features[it->cores[i]].isValid && !SFM_Features[it->cores[i]].find3d)
+			{
+				pts.push_back(SFM_Features[it->cores[i]].pt);
+				PMs.push_back(keyFrames[SFM_Features[it->cores[i]].imgIdx].projMatrix);
+				coresImgIdx.push_back(SFM_Features[it->cores[i]].imgIdx);
+				SFM_Features[it->cores[i]].find3d = true;
+			}
 		}
 		cv::Point3d r3dPt;
 		if (Find3DCoordinates(PMs, pts, r3dPt))
 		{
 			for (std::size_t j = 0; j < coresImgIdx.size(); ++j)
 			{
-				keyFrames[j].r3dPts.push_back(r3dPt);
-				keyFrames[SFM_Features[it->cores[j]].imgIdx].coresIdx.push_back(SFM_Features[it->cores[j]].ptIdx);
+				keyFrames[coresImgIdx[j]].r3dPts.push_back(r3dPt);
+				if (j == 0)
+				{
+					keyFrames[coresImgIdx[j]].coresIdx.push_back(it->ptIdx);
+					cout << it->ptIdx << endl;
+				}
+				else
+				{
+					if (SFM_Features[it->cores[j - 1]].find3d)
+					{
+						keyFrames[coresImgIdx[j]].coresIdx.push_back(SFM_Features[it->cores[j - 1]].ptIdx);
+						cout << SFM_Features[it->cores[j - 1]].ptIdx << endl;
+					}
+				}
 			}
 		}
 	}
+	cout << "Triangulation is end.\n";
 	//BundleAdjustment();
 }

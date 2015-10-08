@@ -17,9 +17,10 @@ void LoadFeatureMap(int argc, char *argv[])
 */
 
 bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat &prevFrameMat, cv::Mat &currFrameMat)
-{
-	if (Optimization.joinable())
-		Optimization.join();
+{	
+	/*if (Optimization.joinable())
+		Optimization.join();*/
+	
 	FrameMetaData currData;
 	if (!FeatureDetection(3000, currData, currFrameMat)) return false;
 
@@ -41,8 +42,9 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 	if (KeyFrameSelection(keyFrames, currData))
 	{
 		CreateKeyFrame(cameraPara, currData, currFrameMat, keyFrames);
-		Optimization = std::thread(Triangulation, cameraPara, ref(keyFrames));
-		Optimization.detach();
+		Triangulation(cameraPara, keyFrames);
+		//Optimization = std::thread(Triangulation, cameraPara, ref(keyFrames));
+		//Optimization.detach();
 		//Optimization(Bundle Adjustment)
 	}
 	frameMetaDatas.push_back(currData);
