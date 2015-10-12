@@ -576,7 +576,7 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 	std::vector<cv::Point2f> matching2DPts;
 	for (std::vector< std::vector<cv::DMatch> >::size_type i = 0; i < goodMatchesSet.size(); ++i)
 	{
-		int index = (int)i;
+		std::size_t index = (std::size_t)i;
 		for (std::vector<cv::DMatch>::size_type j = 0; j < goodMatchesSet[i].size(); ++j)
 		{
 			matching3DPts.push_back(keyFrames[neighboringKeyFrameIdx[index]].r3dPts[goodMatchesSet[i][j].trainIdx]);
@@ -587,6 +587,7 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 	if (matchingCount < 4)
 	{
 		cout << "SolvePnP size < 4\n";
+		currData.state = 'F';
 		return;
 	}
 	cv::Mat K(3, 3, CV_64F), distCoeffs;
@@ -599,8 +600,7 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 	cv::Mat R;
 	cv::Rodrigues(rVec, R);
 
-
-	//initialize the current FrameMetaData
+	//Initialize the current FrameMetaData
 	currData.R.CreateMatrix(3, 3);
 	for (int i = 0; i < 9; ++i)
 		currData.R.m_lpdEntries[i] = R.at<double>(i);

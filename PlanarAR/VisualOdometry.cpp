@@ -16,10 +16,11 @@ void LoadFeatureMap(int argc, char *argv[])
 }
 */
 
-bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat &prevFrameMat, cv::Mat &currFrameMat)
+bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat &prevFrameMat, cv::Mat &currFrameMat, char &m)
 {	
-	/*if (Optimization.joinable())
-		Optimization.join();*/
+	//cout << "KeyFrame Set : " << keyFrames.size() << endl;
+	if (Optimization.joinable())
+		Optimization.join();
 	
 	FrameMetaData currData;
 	if (!FeatureDetection(3000, currData, currFrameMat)) return false;
@@ -37,16 +38,18 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 	else if (FeatureMatching(cameraPara, keyFrames, currData, currFrameMat, neighboringKeyFrameIdx, goodMatchesSet))
 	{
 		EstimateCameraTransformation(cameraPara, trans, keyFrames, currData, neighboringKeyFrameIdx, goodMatchesSet);
+		if (currData.state == 'F')
+			return false;
 	}
 	else return false;
-	if (KeyFrameSelection(keyFrames, currData))
+	if (KeyFrameSelection(keyFrames[keyFrames.size() - 1], currData))
 	{
 		CreateKeyFrame(cameraPara, currData, currFrameMat, keyFrames);
 		Triangulation(cameraPara, keyFrames);
 		//Optimization = std::thread(Triangulation, cameraPara, ref(keyFrames));
-		//Optimization.detach();
-		//Optimization(Bundle Adjustment)
 	}
+	m = currData.state;
 	frameMetaDatas.push_back(currData);
+
 	return true;
 }

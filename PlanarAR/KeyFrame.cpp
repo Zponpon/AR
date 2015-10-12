@@ -48,8 +48,8 @@ double calcDistance(Vector3d &t1, Vector3d &t2)
 	double Cosine = (t1.x*t2.x + t1.y*t2.y + t1.z*t2.z) / (t1Length*t2Length);
 	//double theata = acos(Cosine);
 	double distance = sqrt(pow(t1Length, 2.0) + pow(t2Length, 2.0) - 2 * t1Length*t2Length*Cosine);
-	if (!isnan(distance))
-		cout << "Distance : " << distance << std::endl;
+	/*if (!isnan(distance))
+		cout << "Distance : " << distance << std::endl;*/
 	return distance;
 }
 
@@ -68,9 +68,8 @@ double calcAngle(MyMatrix &R1, MyMatrix &R2)
 	double R2Col2Length = sqrt(pow(R2Col2.x, 2.0) + pow(R2Col2.y, 2.0) + pow(R2Col2.z, 2.0));
 	double Cosine = (R1Col2.x*R2Col2.x + R1Col2.y*R2Col2.y + R1Col2.z*R2Col2.z) / (R1Col2Length*R2Col2Length);
 	double theta = acos(Cosine);
-	//if (!isnan(theta))
-	cout << "Cosine : " << Cosine << endl;
 	cout << "Theta : " << theta << endl;
+
 	return theta;
 }
 
@@ -113,16 +112,16 @@ void FindNeighboringKeyFrames(std::vector<KeyFrame> &keyFrames, FrameMetaData &c
 	neighboringKeyFrameIdx.push_back(end);
 }
 
-bool KeyFrameSelection(std::vector<KeyFrame> &keyFrames, FrameMetaData &currData)
+bool KeyFrameSelection(KeyFrame &last, FrameMetaData &currData)
 {
-	int end = (int)keyFrames.size() - 1;
-	double distance = calcDistance(keyFrames[end].t, currData.t);
-	if(distance < 100.0)
+	//int end = (int)keyFrames.size() - 1;
+	//std::vector<KeyFrame>::reverse_iterator last = keyFrames.
+	double distance = calcDistance(last.t, currData.t);
+	if(distance < 150.0)
 		return false;
-	/*
-	double angle = calcAngle(keyFrames[last].R, currData.R);
-	if (angle < 60.0 || isnan(angle))
+	double angle = calcAngle(last.R, currData.R);
+	if (angle < 0.15 || isnan(angle))
 		return false;
-	*/
+
 	return true;
 }

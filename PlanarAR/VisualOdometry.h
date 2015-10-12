@@ -10,7 +10,7 @@ using std::vector;
 
 //void CreateFeatureMap(FeatureMap &featureMap, int minHessian);
 void LoadFeatureMap(int argc, char *argv[]);
-bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat &prevFrameImg, cv::Mat &currFrameImg);
+bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat &prevFrameImg, cv::Mat &currFrameImg, char &m);
 //void VOD();
 
 #endif

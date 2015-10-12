@@ -234,10 +234,10 @@ void display(void)
 	cv::Mat currFrameMat = cv::Mat(winHeight, winWidth, CV_8UC3, frame);
 	if (prevFrame != NULL)
 		prevFrameMat = cv::Mat(winHeight, winWidth, CV_8UC3, prevFrame);
-	bool rtn = VO(cameraPara, trans, featureMap, prevFrameMat, currFrameMat);
+	char m;
+	bool rtn = VO(cameraPara, trans, featureMap, prevFrameMat, currFrameMat, m);
 	if (rtn)
 	{
-		//displaySetting(trans, gl_para);
 		argConvGlpara(trans, gl_para);
 		DrawMode3D(cameraPara, winWidth, winHeight, true, CAMERA_ORIENTATION_POSITIVE_Z);
 		GLfloat   light_position[] = { 100.0, -200.0, 200.0, 0.0 };
@@ -248,11 +248,12 @@ void display(void)
 		glLoadMatrixd(gl_para);
 
 		glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-
-		glTranslated(0.0, 0.0, 50.0);
+		if (m == 'H')
+			glTranslated(0.0, 0.0, 50.0);
+		if (m == 'P')
+			glTranslated(400.0, 300.0, 50.0);
 		glRotated(90.0, 1.0, 0.0, 0.0);
 		glutWireTeapot(100.0);
-		//glutWireCube(5.0);
 	}
 	glutSwapBuffers();
 	FrameCount++;

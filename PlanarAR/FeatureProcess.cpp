@@ -279,7 +279,7 @@ void FindGoodMatches(std::vector<cv::DMatch> &matches, std::vector<cv::DMatch> &
 		}
 	}
 	std::vector<cv::DMatch> tmp;
-	for (std::size_t i = 0; i < goodMatches.size(); i++)
+	for (std::vector<cv::DMatch>::size_type i = 0; i < goodMatches.size(); i++)
 	{
 		if (GoodMatchesFlag[i])
 			tmp.push_back(goodMatches[i]);
@@ -306,26 +306,21 @@ bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame
 		cout << "Neighboring keyframe size is zero.\n";
 		return false;
 	}
-	//std::vector< vector<cv:6:DMatch> > 
-	for (std::vector<int>::iterator it = neighboringKeyFrameIdx.begin(); it != neighboringKeyFrameIdx.end(); ++it)
+	for (std::size_t i = 0; i < neighboringKeyFrameIdx.size(); ++i)
 	{
-		int r3dPtsCount = (int)keyFrames[*it].coresIdx.size();
+		int r3dPtsCount = (int)keyFrames[i].coresIdx.size();
 		if (r3dPtsCount == 0) return false;
-		/*
-
-		cout << "Size : " << r3dPtsCount << endl;
-		for (int i = 0; i < r3dPtsCount; ++i)
-		{
-			cout << keyFrames[*it].coresIdx[i] << endl;
-		}
-		
-		*/
 		cv::Mat descriptors(r3dPtsCount, currData.descriptors.cols, currData.descriptors.type());
-		cout << "Neighboring row" << keyFrames[*it].descriptors.rows << endl;
-		for (int i = 0; i < r3dPtsCount; ++i)
+		/*
+			This bug is from EstablishImageCorrespondences function
+			Each coresIdx is -1
+		for (int j = 0; j < r3dPtsCount; ++j)
 		{
-			keyFrames[*it].descriptors.row(keyFrames[*it].coresIdx[i]).copyTo(descriptors.row(i));
+			//keyFrames[i].descriptors.row(keyFrames[i].coresIdx[j]).copyTo(descriptors.row(j));
+			cout << keyFrames[i].coresIdx[j] << endl;
 		}
+
+		*/
 		std::vector<cv::DMatch> matches, goodMatches;
 		FlannMatching(currData.descriptors, descriptors, matches);
 		FindGoodMatches(matches, goodMatches);

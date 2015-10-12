@@ -48,5 +48,5 @@ void CreateKeyFrame(double *cameraPara, FrameMetaData &currFrame, cv::Mat &currF
 
 void FindNeighboringKeyFrames(std::vector<KeyFrame> &keyFrames, FrameMetaData &currFrame, std::vector<int> &goodKeyFrameIdx);
 
-bool KeyFrameSelection(std::vector<KeyFrame> &keyFrames, FrameMetaData &currFrame);
+bool KeyFrameSelection(KeyFrame &last, FrameMetaData &currFrame);
 #endif
