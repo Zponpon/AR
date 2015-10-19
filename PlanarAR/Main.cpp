@@ -248,12 +248,20 @@ void display(void)
 		glLoadMatrixd(gl_para);
 
 		glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+		if (m == 'F')
+			std::cout << "PnP failed\n";
 		if (m == 'H')
+		{
 			glTranslated(0.0, 0.0, 50.0);
+			glRotated(90.0, 1.0, 0.0, 0.0);
+			glutWireTeapot(100.0);
+		}
 		if (m == 'P')
+		{
 			glTranslated(400.0, 300.0, 50.0);
-		glRotated(90.0, 1.0, 0.0, 0.0);
-		glutWireTeapot(100.0);
+			glRotated(90.0, 1.0, 0.0, 0.0);
+			glutWireCube(100.0);
+		}
 	}
 	glutSwapBuffers();
 	FrameCount++;
@@ -267,7 +275,7 @@ void KeyboardFunc(unsigned char key, int x, int y)
 		t_end=clock();
 		printf("Frame rate = %f \n",FrameCount*(double)CLK_TCK/((double)(t_end-t_start)));
 		StopVideoDevice();
-		
+		StopMultiThread();
 		glutDestroyWindow(glutGetWindow());
 		exit(0);
 	}
@@ -302,7 +310,7 @@ void main(int argc, char *argv[])
 	
  	featureMap.image = cv::imread("11647241_636517923150104_1570377205_n.jpg");
 	//featureMaps.push_back(featureMap);
-	CreateFeatureMap(featureMap, 3000);
+	CreateFeatureMaps(featureMap, 3000);
 	//LoadFeatureMap(argc, argv);
 
 	t_start = clock();

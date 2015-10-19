@@ -27,6 +27,15 @@ void FlannMatching(cv::Mat &descriptors1, cv::Mat &descriptors2, std::vector<cv:
 	glutSetWindow(win);
 }
 
+bool FeatureDetection(FeatureMap &featureMap, unsigned int minHessian)
+{
+	//Detect keypoints of featureMaps only
+	SurfDetection(featureMap.image, featureMap.keypoints, featureMap.descriptors, minHessian);
+	if ((int)featureMap.keypoints.size() == 0)
+		return false;
+	return true;
+}
+
 bool FeatureDetection(unsigned int minHessian, FrameMetaData &currData, cv::Mat &currFrameImg)
 {
 	SurfDetection(currFrameImg, currData.keypoints, currData.descriptors, minHessian);
@@ -287,7 +296,7 @@ void FindGoodMatches(std::vector<cv::DMatch> &matches, std::vector<cv::DMatch> &
 	goodMatches.swap(tmp);
 }
 
-
+/*	PnP	*/
 bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, FrameMetaData &currData, cv::Mat &currFrameImg, std::vector<int> &neighboringKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
 {
 	/* When we move the camera to the place where are without the featureMap                  */
@@ -308,31 +317,32 @@ bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame
 	}
 	for (std::size_t i = 0; i < neighboringKeyFrameIdx.size(); ++i)
 	{
-		int r3dPtsCount = (int)keyFrames[i].coresIdx.size();
-		if (r3dPtsCount == 0) return false;
-		cv::Mat descriptors(r3dPtsCount, currData.descriptors.cols, currData.descriptors.type());
-		/*
-			This bug is from EstablishImageCorrespondences function
-			Each coresIdx is -1
-		for (int j = 0; j < r3dPtsCount; ++j)
+		int index = neighboringKeyFrameIdx[i];
+		int r3dPtsCount = (int)keyFrames[index].r3dPts.size();
+		if (r3dPtsCount > 0)
 		{
-			//keyFrames[i].descriptors.row(keyFrames[i].coresIdx[j]).copyTo(descriptors.row(j));
-			cout << keyFrames[i].coresIdx[j] << endl;
-		}
+			/*	This bug is from EstablishImageCorrespondences function
+				Each coresIdx is -1*/
+			//	Initialize the descriptors
+			cv::Mat descriptors(r3dPtsCount, currData.descriptors.cols, currData.descriptors.type());
+			for (int j = 0; j < r3dPtsCount; ++j)
+				keyFrames[index].descriptors.row(keyFrames[index].coresIdx[j]).copyTo(descriptors.row(j));
 
-		*/
-		std::vector<cv::DMatch> matches, goodMatches;
-		FlannMatching(currData.descriptors, descriptors, matches);
-		FindGoodMatches(matches, goodMatches);
-		goodMatchesSet.push_back(goodMatches);
+			std::vector<cv::DMatch> matches, goodMatches;
+			FlannMatching(currData.descriptors, descriptors, matches);
+			FindGoodMatches(matches, goodMatches);
+			goodMatchesSet.push_back(goodMatches);
+		}
 	}
+	if (goodMatchesSet.size() == 0)
+		return false;
 	cout << "Matching scene with keyframes is end.\n";
 	return true;
 }
 
+/*	Triangulation	*/
 void FeatureMatching(KeyFrame &query, KeyFrame &train, std::vector<cv::DMatch> &goodMatches)
 {
-	//Triangulation
 	cout << "Start Triangulation matching.\n";
 	std::vector<cv::DMatch> matches;
 	FlannMatching(query.descriptors, train.descriptors, matches);

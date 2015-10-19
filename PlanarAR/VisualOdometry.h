@@ -9,7 +9,9 @@
 using std::vector;
 
 //void CreateFeatureMap(FeatureMap &featureMap, int minHessian);
-void LoadFeatureMap(int argc, char *argv[]);
+void CreateFeatureMaps(FeatureMap &featureMap, unsigned int minHessian);
+void LoadFeatureMaps(int argc, char *argv[]);
+void StopMultiThread();
 bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat &prevFrameImg, cv::Mat &currFrameImg, char &m);
 //void VOD();
 

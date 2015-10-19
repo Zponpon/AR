@@ -20,8 +20,9 @@ using cv::imshow;
 using cv::waitKey;
 using cv::imwrite;
 
-void SurfDetection(cv::Mat &image, std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors, unsigned int minHessian);
+//void SurfDetection(cv::Mat &image, std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors, unsigned int minHessian);
 void FlannMatching(cv::Mat &descriptors1, cv::Mat &descriptors2, std::vector<cv::DMatch> &matches);
+bool FeatureDetection(FeatureMap &featureMap, unsigned int minHessian);
 bool FeatureDetection(unsigned int minHessian, FrameMetaData &currData, cv::Mat &currFrameImg);
 
 //For homography

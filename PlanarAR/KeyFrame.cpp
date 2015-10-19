@@ -46,10 +46,11 @@ double calcDistance(Vector3d &t1, Vector3d &t2)
 	double t1Length = sqrt(pow(t1.x, 2.0) + pow(t1.y, 2.0) + pow(t1.z, 2.0));
 	double t2Length = sqrt(pow(t2.x, 2.0) + pow(t2.y, 2.0) + pow(t2.z, 2.0));
 	double Cosine = (t1.x*t2.x + t1.y*t2.y + t1.z*t2.z) / (t1Length*t2Length);
-	//double theata = acos(Cosine);
+	double theta = acos(Cosine);
+	if (theta > 90)
+		return 0.00;
+	//畫出一個三角形就知道了
 	double distance = sqrt(pow(t1Length, 2.0) + pow(t2Length, 2.0) - 2 * t1Length*t2Length*Cosine);
-	/*if (!isnan(distance))
-		cout << "Distance : " << distance << std::endl;*/
 	return distance;
 }
 
@@ -68,7 +69,6 @@ double calcAngle(MyMatrix &R1, MyMatrix &R2)
 	double R2Col2Length = sqrt(pow(R2Col2.x, 2.0) + pow(R2Col2.y, 2.0) + pow(R2Col2.z, 2.0));
 	double Cosine = (R1Col2.x*R2Col2.x + R1Col2.y*R2Col2.y + R1Col2.z*R2Col2.z) / (R1Col2Length*R2Col2Length);
 	double theta = acos(Cosine);
-	cout << "Theta : " << theta << endl;
 
 	return theta;
 }
@@ -86,6 +86,9 @@ bool isNegihboringKeyFrame(Vector3d &t1, Vector3d &t2, Vector3d &r3dPtVec)
 	double theta1 = acos(Cosine1);
 	double theta2 = acos(Cosine2);
 	
+	//求出來的theta都很小 0.5~1.5
+	//cout << theta1 << " " << theta2 << endl;
+	//cout << abs(theta1 - theta2) << endl;
 	if (theta1 > 90.0 || theta2 > 90.0)
 		return false;
 	if (abs(theta1 - theta2) >= 30.0)
@@ -96,8 +99,9 @@ bool isNegihboringKeyFrame(Vector3d &t1, Vector3d &t2, Vector3d &r3dPtVec)
 void FindNeighboringKeyFrames(std::vector<KeyFrame> &keyFrames, FrameMetaData &currData, std::vector<int> &neighboringKeyFrameIdx)
 {
 	/*	Use the last keyframe to find the neighboring keyframes	*/
+	int keyFramesSize = (int)keyFrames.size() - 1;
 	cv::Point2f originPt(400.0f, 300.0f);
-	for (std::vector<KeyFrame>::size_type i = 0; i < keyFrames.size() - 1; ++i)
+	for (std::vector<KeyFrame>::size_type i = 0; i < keyFramesSize; ++i)
 	{
 		cv::Point3d r3dPt;
 		if (Find3DCoordinates(keyFrames[i].projMatrix, keyFrames.back().projMatrix, originPt, originPt, r3dPt))
@@ -112,14 +116,13 @@ void FindNeighboringKeyFrames(std::vector<KeyFrame> &keyFrames, FrameMetaData &c
 	neighboringKeyFrameIdx.push_back(end);
 }
 
-bool KeyFrameSelection(KeyFrame &last, FrameMetaData &currData)
+bool KeyFrameSelection(KeyFrame &keyFramesBack, FrameMetaData &currData)
 {
-	//int end = (int)keyFrames.size() - 1;
-	//std::vector<KeyFrame>::reverse_iterator last = keyFrames.
-	double distance = calcDistance(last.t, currData.t);
+	double distance = calcDistance(keyFramesBack.t, currData.t);
 	if(distance < 150.0)
 		return false;
-	double angle = calcAngle(last.R, currData.R);
+	double angle = calcAngle(keyFramesBack.R, currData.R);
+	//	計算出來的角度Theat極小
 	if (angle < 0.15 || isnan(angle))
 		return false;
 

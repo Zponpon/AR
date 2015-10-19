@@ -507,7 +507,7 @@ bool UpdateCameraIntrinsicParameters(double *cameraPara, MyMatrix &H)
 	}
 }
 
-void CreateFeatureMap(FeatureMap &featureMap, int minHessian)
+/*void CreateFeatureMap(FeatureMap &featureMap, int minHessian)
 {
 	SurfDetection(featureMap.image, featureMap.keypoints, featureMap.descriptors, minHessian);
 
@@ -517,7 +517,7 @@ void CreateFeatureMap(FeatureMap &featureMap, int minHessian)
 		featureMap.keypoints[i].pt.y -= featureMap.image.rows / 2;
 		featureMap.keypoints[i].pt.y = -featureMap.keypoints[i].pt.y; // Because image y coordinate is positive in downward direction
 	}
-}
+}*/
 
 void EstimateCameraTransformation(double *cameraPara, double trans[3][4], FeatureMap &featureMap, FrameMetaData &currData, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
 {
@@ -579,14 +579,15 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 		std::size_t index = (std::size_t)i;
 		for (std::vector<cv::DMatch>::size_type j = 0; j < goodMatchesSet[i].size(); ++j)
 		{
-			matching3DPts.push_back(keyFrames[neighboringKeyFrameIdx[index]].r3dPts[goodMatchesSet[i][j].trainIdx]);
 			matching2DPts.push_back(currData.keypoints[goodMatchesSet[i][j].queryIdx].pt);
+			matching3DPts.push_back(keyFrames[neighboringKeyFrameIdx[index]].r3dPts[goodMatchesSet[i][j].trainIdx]);
 		}
 	}
 	int matchingCount = (int)matching3DPts.size();
 	if (matchingCount < 4)
 	{
 		cout << "SolvePnP size < 4\n";
+		cout << "SolvePnP Size : " << matchingCount << endl;
 		currData.state = 'F';
 		return;
 	}

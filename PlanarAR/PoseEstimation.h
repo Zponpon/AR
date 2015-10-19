@@ -19,7 +19,7 @@ public:
 	cv::Mat descriptors;
 };
 
-void CreateFeatureMap(FeatureMap &featureMap, int minHessian);
+//void CreateFeatureMap(FeatureMap &featureMap, int minHessian);
 
 //For homography
 void EstimateCameraTransformation(double *cameraPara, double trans[3][4], FeatureMap &featureMap, FrameMetaData &currFrame, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers);

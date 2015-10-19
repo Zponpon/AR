@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <mutex>
 #include <math.h>
 #include <iterator>
 #include "Matrix\MyMatrix.h"
@@ -543,7 +544,7 @@ void UpdateSFM_Features(KeyFrame &query, int imgIdx1, KeyFrame &train, int imgId
 				SFM_Features.push_back(feature);
 
 				// update the cores field
-				int SFM_FeatureSize = SFM_Features.size();
+				int SFM_FeatureSize = (int)SFM_Features.size();
 				for (vector<int>::size_type j = 0; j < SFM_Features[pos2].cores.size(); j++)
 				{
 					int index = SFM_Features[pos2].cores[j];	//已存在SFM的匹配點index
@@ -570,7 +571,7 @@ void UpdateSFM_Features(KeyFrame &query, int imgIdx1, KeyFrame &train, int imgId
 				SFM_Features.push_back(feature);
 
 				// update the cores field
-				int SFM_FeatureSize = SFM_Features.size();
+				int SFM_FeatureSize = (int)SFM_Features.size();
 				for (size_t j = 0; j < SFM_Features[pos1].cores.size(); j++)
 				{
 					int index = SFM_Features[pos1].cores[j];	//已存在SFM的匹配點index
@@ -671,7 +672,7 @@ void EstablishImageCorrespondences(std::vector<KeyFrame> &keyFrames)
 
 void BundleAdjustment(std::vector<KeyFrame> &keyFrames)
 {
-	//We do global or local optimization here
+	//We do global or local optimization at here
 }
 
 void Triangulation(double *cameraPara, std::vector<KeyFrame> &keyFrames)
@@ -717,6 +718,8 @@ void Triangulation(double *cameraPara, std::vector<KeyFrame> &keyFrames)
 			}
 		}
 	}
+
+	//RemoveRedundantCorrespondences(imageFeatures, sfm_features);
 	cout << "Triangulation is end.\n";
 	//BundleAdjustment();
 }
