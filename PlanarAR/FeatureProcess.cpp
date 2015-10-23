@@ -1,5 +1,6 @@
 #include "FeatureProcess.h"
 
+/*	Detection method : Surf(OpenCV)	*/
 void SurfDetection(cv::Mat &image, std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors, unsigned int minHessian)
 {
 	int win = glutGetWindow();
@@ -43,7 +44,6 @@ bool FeatureDetection(unsigned int minHessian, FrameMetaData &currData, cv::Mat 
 		return false;
 	return true;
 }
-
 
 void RemoveDuplicatePts(std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches)
 {
@@ -303,16 +303,16 @@ bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame
 	/* We use the last keyframe to find the neighboring keyframes in the keyframe set         */
 	/* Use these 3d points constructed by keyframes we found to estimate our camera pose(PnP) */
 
-	cout << "Start matching scene with keyframes.\n";
+//	cout << "Start matching scene with keyframes.\n";
 	if (keyFrames.size() < 2)
 	{
-		cout << "KeyFrames size < 2\n";
+		//cout << "KeyFrames size < 2\n";
 		return false;
 	}
 	FindNeighboringKeyFrames(keyFrames, currData, neighboringKeyFrameIdx);
 	if (neighboringKeyFrameIdx.size() == 0)
 	{
-		cout << "Neighboring keyframe size is zero.\n";
+		//cout << "Neighboring keyframe size is zero.\n";
 		return false;
 	}
 	for (std::size_t i = 0; i < neighboringKeyFrameIdx.size(); ++i)
@@ -336,17 +336,16 @@ bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame
 	}
 	if (goodMatchesSet.size() == 0)
 		return false;
-	cout << "Matching scene with keyframes is end.\n";
+//	cout << "Matching scene with keyframes is end.\n";
 	return true;
 }
 
 /*	Triangulation	*/
 void FeatureMatching(KeyFrame &query, KeyFrame &train, std::vector<cv::DMatch> &goodMatches)
 {
-	cout << "Start Triangulation matching.\n";
+	//cout << "Start Triangulation matching.\n";
 	std::vector<cv::DMatch> matches;
 	FlannMatching(query.descriptors, train.descriptors, matches);
-	cout << "Matches size : "<< matches.size() << endl;
 	FindGoodMatches(matches, goodMatches);
-	cout << "Triangulation mathcing is end.\n";
+	//cout << "Triangulation mathcing is end.\n";
 }

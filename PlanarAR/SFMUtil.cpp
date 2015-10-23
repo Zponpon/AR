@@ -617,7 +617,7 @@ void UpdateSFM_Features(KeyFrame &query, int imgIdx1, KeyFrame &train, int imgId
 
 void RemoveOutlier(KeyFrame &query, KeyFrame &train, std::vector<cv::DMatch> &goodMatches)
 {
-	cout << "Starting remove outlier(keyframes)\n";
+	//cout << "Starting remove outlier(keyframes)\n";
 	int ptCount = (int)goodMatches.size();
 	if (ptCount > 16)	return;
 
@@ -637,8 +637,8 @@ void RemoveOutlier(KeyFrame &query, KeyFrame &train, std::vector<cv::DMatch> &go
 			goodMatches[i].trainIdx = -1;
 		}
 	}
-	cout << "Mask : " << mask << endl;
-	cout << "Remove outlier is end.\n";
+//	cout << "Mask : " << mask << endl;
+//	cout << "Remove outlier is end.\n";
 }
 
 void EstablishImageCorrespondences(std::vector<KeyFrame> &keyFrames)
@@ -670,6 +670,115 @@ void EstablishImageCorrespondences(std::vector<KeyFrame> &keyFrames)
 	}
 }
 
+void RemoveRedundantCorrespondences(const vector<KeyFrame> &keyFrames)	//OpenCV 
+{
+	for (vector<SFM_Feature>::size_type i = 0; i < SFM_Features.size(); ++i)
+	{
+		if (SFM_Features[i].isValid)
+		{
+			int nPtsInSameView = 1;
+			for (vector<int>::size_type j = 0; j < SFM_Features[i].cores.size(); ++j)
+			{
+				int index = SFM_Features[i].cores[j];
+				if (SFM_Features[index].isValid && SFM_Features[index].imgIdx == SFM_Features[i].imgIdx) 
+					nPtsInSameView++;
+			}
+
+			if (nPtsInSameView >= 2)
+			{
+				cv::Mat descriptors1, descriptors2; // descriptors1 are for the features to be checked and descriptors2 are for other features
+				int count1 = 0, count2 = 0, dim = keyFrames[0].descriptors.cols;
+				float *src_ptr, *des_ptr;
+				vector<int> featureIndex;
+
+				// prepare the descriptors
+				descriptors1.create(nPtsInSameView, dim, CV_32F);
+				descriptors2.create(SFM_Features[i].cores.size() - nPtsInSameView + 1, dim, CV_32F);
+
+				src_ptr = (float *)(keyFrames[SFM_Features[i].imgIdx].descriptors.ptr<float>(SFM_Features[i].descriptorIdx));
+				des_ptr = (float *)(descriptors1.ptr<float>(count1));
+				memcpy(des_ptr, src_ptr, sizeof(CV_32F)*dim);
+				count1++;
+				featureIndex.push_back(i);
+
+				for (vector<int>::size_type k = 0; k < SFM_Features[i].cores.size(); ++k)
+				{
+					int index = SFM_Features[i].cores[k];
+					if (SFM_Features[index].isValid)
+					{
+						src_ptr = (float *)(keyFrames[SFM_Features[index].imgIdx].descriptors.ptr<float>(SFM_Features[index].descriptorIdx));
+						if (SFM_Features[index].imgIdx == SFM_Features[i].imgIdx)
+						{
+							des_ptr = (float *)(descriptors1.ptr<float>(count1));
+							memcpy(des_ptr, src_ptr, sizeof(CV_32F)*dim);
+							count1++;
+							featureIndex.push_back(SFM_Features[i].cores[k]);
+						}
+						else
+						{
+							des_ptr = (float *)(descriptors2.ptr<float>(count2));
+							memcpy(des_ptr, src_ptr, sizeof(CV_32F)*dim);
+							count2++;
+						}
+					}
+				}
+
+				// calculate the distance according to the descriptors
+				float minDis = 1E10;
+				int minIdx = -1;
+
+				for (int k = 0; k < count1; k++)
+				{
+					float *ptr1, *ptr2;
+					float dis = 0.0;
+					ptr1 = (float *)(descriptors1.ptr<float>(k));
+					for (int l = 0; l < count2; l++)
+					{
+						ptr2 = (float *)(descriptors2.ptr<float>(l));
+						for (int m = 0; m < dim; m++)
+						{
+							dis += (ptr1[m] - ptr2[m])*(ptr1[m] - ptr2[m]);
+						}
+					}
+					if (dis < minDis)
+					{
+						minDis = dis;
+						minIdx = featureIndex[k];
+					}
+				}
+
+				if (minIdx == i) // preserve current feature
+				{
+					// Set the other feature in the same view as invalid and update the cores field in other correspondences.
+					for (vector<int>::size_type j = 1; j < featureIndex.size(); ++j)
+					{
+						vector<int>::iterator iter = find(SFM_Features[i].cores.begin(), SFM_Features[i].cores.end(), featureIndex[j]);
+						if (iter != SFM_Features[i].cores.end()) SFM_Features[i].cores.erase(iter);
+						SFM_Features[featureIndex[j]].isValid = false;
+						for (vector<int>::size_type k = 0; k < SFM_Features[i].cores.size(); ++k)
+						{
+							int index = SFM_Features[i].cores[k];
+							vector<int>::iterator iter = find(SFM_Features[index].cores.begin(), SFM_Features[index].cores.end(), featureIndex[j]);
+							if (iter != SFM_Features[index].cores.end()) SFM_Features[index].cores.erase(iter);
+						}
+					}
+				}
+				else // Current feature is a redundant feature. Set it as inValid and modify the corresponding cores filed of other features
+				{
+					SFM_Features[i].isValid = false;
+					for (vector<int>::size_type j = 0; j < SFM_Features[i].cores.size(); ++j)
+					{
+						int index = SFM_Features[i].cores[j];
+						vector<int>::iterator iter = find(SFM_Features[index].cores.begin(), SFM_Features[index].cores.end(), i);
+						if (iter != SFM_Features[index].cores.end()) SFM_Features[index].cores.erase(iter);
+					}
+				}
+
+			}
+		}
+	}
+}
+
 void BundleAdjustment(std::vector<KeyFrame> &keyFrames)
 {
 	//We do global or local optimization at here
@@ -680,7 +789,7 @@ void Triangulation(double *cameraPara, std::vector<KeyFrame> &keyFrames)
 	//This process is done by another thread
 	int size = (int)keyFrames.size();
 	if (size < 2) return;
-	cout << "Starting triangulation.\n";
+	//cout << "Starting triangulation.\n";
 	vector<cv::Point3d> r3dPts;
 	EstablishImageCorrespondences(keyFrames);
 
@@ -705,7 +814,6 @@ void Triangulation(double *cameraPara, std::vector<KeyFrame> &keyFrames)
 			cv::Point3d r3dPt;
 			if (Find3DCoordinates(PMs, pts, r3dPt))
 			{
-				cout << feature->imgIdx << " " << feature->ptIdx << endl;
 				keyFrames[feature->imgIdx].coresIdx.push_back(feature->ptIdx);
 				keyFrames[feature->imgIdx].r3dPts.push_back(r3dPt);
 				feature->find3d = true;
@@ -719,7 +827,7 @@ void Triangulation(double *cameraPara, std::vector<KeyFrame> &keyFrames)
 		}
 	}
 
-	//RemoveRedundantCorrespondences(imageFeatures, sfm_features);
-	cout << "Triangulation is end.\n";
+	RemoveRedundantCorrespondences(keyFrames);
+	//cout << "Triangulation is end.\n";
 	//BundleAdjustment();
 }

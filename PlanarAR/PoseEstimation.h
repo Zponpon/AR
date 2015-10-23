@@ -19,12 +19,10 @@ public:
 	cv::Mat descriptors;
 };
 
-//void CreateFeatureMap(FeatureMap &featureMap, int minHessian);
-
-//For homography
+/*	Method : Homography(OpenCV)	*/
 void EstimateCameraTransformation(double *cameraPara, double trans[3][4], FeatureMap &featureMap, FrameMetaData &currFrame, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers);
 
-//For Visual odometry
+/*	Estimation method : PnP Ransac(OpenCV)	*/
 void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::vector<KeyFrame> &keyFrames, FrameMetaData &currFrame, std::vector<int> &neighboringKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet);
 
 #endif

@@ -522,7 +522,7 @@ bool UpdateCameraIntrinsicParameters(double *cameraPara, MyMatrix &H)
 void EstimateCameraTransformation(double *cameraPara, double trans[3][4], FeatureMap &featureMap, FrameMetaData &currData, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
 {
 	//Using homography to estimate camera pose
-	cout << "Starting PoseEstimation by homography\n";
+	//cout << "Starting PoseEstimation by homography\n";
 	cv::Mat mask;	//Record the inliers 
 	cv::Mat Homo(cv::findHomography(featureMapGoodMatches, currFrameGoodMatches, CV_RANSAC, 3.0, mask));
 	MyMatrix H(3, 3);
@@ -566,12 +566,12 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], Featur
 	//	把場景中好的特徵點放入prevFrameinliers，給OpticalFlow計算用
 	prevFeatureMapInliers.swap(featureMapInliers);
 	prevFrameInliers.swap(frameInliers);
-	cout << "PoseEstimation by homography is successful.\n";
+	//cout << "PoseEstimation by homography is successful.\n";
 }
 
 void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::vector<KeyFrame> &keyFrames, FrameMetaData &currData, std::vector<int> &neighboringKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
 {
-	cout << "PoseEstimation by PnP Start.\n";
+	//cout << "PoseEstimation by PnP Start.\n";
 	std::vector<cv::Point3d> matching3DPts;
 	std::vector<cv::Point2f> matching2DPts;
 	for (std::vector< std::vector<cv::DMatch> >::size_type i = 0; i < goodMatchesSet.size(); ++i)
@@ -586,8 +586,8 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 	int matchingCount = (int)matching3DPts.size();
 	if (matchingCount < 4)
 	{
-		cout << "SolvePnP size < 4\n";
-		cout << "SolvePnP Size : " << matchingCount << endl;
+		/*cout << "SolvePnP size < 4\n";
+		cout << "SolvePnP Size : " << matchingCount << endl;*/
 		currData.state = 'F';
 		return;
 	}
@@ -621,5 +621,5 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 	trans[2][1] = currData.R.m_lpdEntries[7];
 	trans[2][2] = currData.R.m_lpdEntries[8];
 	trans[2][3] = currData.t.z;
-	cout << "PoseEstimation by PnP is successful.\n";
+	//cout << "PoseEstimation by PnP is successful.\n";
 }

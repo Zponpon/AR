@@ -20,18 +20,19 @@ using cv::imshow;
 using cv::waitKey;
 using cv::imwrite;
 
-//void SurfDetection(cv::Mat &image, std::vector<cv::KeyPoint> &keypoints, cv::Mat &descriptors, unsigned int minHessian);
 void FlannMatching(cv::Mat &descriptors1, cv::Mat &descriptors2, std::vector<cv::DMatch> &matches);
+/* FeatureMap */
 bool FeatureDetection(FeatureMap &featureMap, unsigned int minHessian);
+/* Any Scene */
 bool FeatureDetection(unsigned int minHessian, FrameMetaData &currData, cv::Mat &currFrameImg);
 
-//For homography
+/*	Homography	*/
 bool FeatureMatching(FeatureMap &featureMap, FrameMetaData &currFrame, cv::Mat &currFrameImg, cv::Mat &prevFrameImg, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapGoodMatches, std::vector<cv::Point2f> &prevFrameGoodMatches);
 
-//For solvePnPRansac
+/*	PnPRansac	*/
 bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, FrameMetaData &currData, cv::Mat &currFrameImg, std::vector<int> &neighboringKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet);
 
-//For triangulation
+/*	Triangulation	*/
 void FeatureMatching(KeyFrame &query, KeyFrame &train, std::vector<cv::DMatch> &goodMatches);
 
 
