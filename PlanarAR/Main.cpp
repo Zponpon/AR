@@ -8,7 +8,7 @@
 #include "PoseEstimation.h"
 #include "KeyFrame.h"
 #include "DebugFunc.h"
-#include "Video.h"
+#include "Video.h"	
 
 #define VIEW_VOLUME_NEAR 1.0
 #define VIEW_VOLUME_FAR 3000.0
@@ -27,12 +27,9 @@ double cameraPara[9] = { 9.1317151001595698e+002, 0.00000, 3.9695336273339319e+0
 
 FeatureMap featureMap;
 //std::vector<FeatureMap> featureMaps;
-//std::vector<Frame> frameInfos;
 cv::VideoWriter writer("GoProTestVideo.avi", CV_FOURCC('M', 'J', 'P', 'G'), 10.0, cv::Size(800, 600));
 
 clock_t t_start, t_end;
-
-//std::vector<KeyFrame> keyFrames;
 
 void InitOpenGL(void)
 {
@@ -224,8 +221,6 @@ void display(void)
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
-
-	//GLfloat   light_position[]  = {100.0,-200.0,200.0,0.0};
 	
 	double trans[3][4];
 	double gl_para[16];
@@ -234,8 +229,7 @@ void display(void)
 	cv::Mat currFrameMat = cv::Mat(winHeight, winWidth, CV_8UC3, frame);
 	if (prevFrame != NULL)
 		prevFrameMat = cv::Mat(winHeight, winWidth, CV_8UC3, prevFrame);
-	char m;
-	bool rtn = VO(cameraPara, trans, featureMap, prevFrameMat, currFrameMat, m);
+	bool rtn = VO(cameraPara, trans, featureMap, prevFrameMat, currFrameMat);
 	if (rtn)
 	{
 		argConvGlpara(trans, gl_para);
@@ -248,15 +242,16 @@ void display(void)
 		glLoadMatrixd(gl_para);
 
 		glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-		if (m == 'F')
+		char method = EstimationMethod();
+		if (method == 'F')
 			std::cout << "PnP failed\n";
-		if (m == 'H')
+		if (method == 'H')
 		{
 			glTranslated(0.0, 0.0, 50.0);
 			glRotated(90.0, 1.0, 0.0, 0.0);
 			glutWireTeapot(100.0);
 		}
-		if (m == 'P')
+		if (method == 'P')
 		{
 			glTranslated(400.0, 300.0, 50.0);
 			glRotated(90.0, 1.0, 0.0, 0.0);

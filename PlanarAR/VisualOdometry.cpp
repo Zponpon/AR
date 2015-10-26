@@ -1,7 +1,6 @@
 #include <thread>
 #include <ctime>
 #include <chrono>
-#include <mutex>
 #include <map>
 #include "VisualOdometry.h"
 #include "FeatureProcess.h"
@@ -24,13 +23,12 @@ void CreateFeatureMaps(FeatureMap &featureMap, unsigned int minHessian)
 {
 	if (FeatureDetection(featureMap, minHessian))
 	{
+		//Initialize the featureMap
 		for (std::vector<cv::KeyPoint>::size_type i = 0; i < featureMap.keypoints.size(); ++i)
 		{
 			featureMap.keypoints[i].pt.x -= featureMap.image.cols / 2;
 			featureMap.keypoints[i].pt.y -= featureMap.image.rows / 2;
-
-			// Because image y coordinate is positive in downward direction
-			featureMap.keypoints[i].pt.y = -featureMap.keypoints[i].pt.y; 
+			featureMap.keypoints[i].pt.y = -featureMap.keypoints[i].pt.y; // Because image y coordinate is positive in downward direction
 		}
 	}
 }
@@ -41,21 +39,28 @@ void StopMultiThread()
 	std::this_thread::sleep_until(system_clock::now());
 }
 
+char EstimationMethod()
+{
+	/*	Get the latest estimation method	*/
+	return frameMetaDatas.back().state;
+}
+
 void RemoveRedundancyIdx()
 {
-	//跟SFM_Features會不會有問題？
+	/*	刪除重複的對應點	*/
 	for (vector<KeyFrame>::iterator KF = keyFrames.begin(); KF != keyFrames.end(); ++KF)
 	{
 		std::map<int, cv::Point3d> indexMap;
 
-		std::size_t i = KF->coresIdx.size() - 1;
-		std::vector<cv::Point3d>::size_type j = KF->r3dPts.size() - 1;
+		int i = (int)KF->coresIdx.size() - 1;
+		int j = (int)KF->r3dPts.size() - 1;
 		while (i & j)
 		{
 			indexMap.insert(std::pair<int, cv::Point3d>(KF->coresIdx[i--], KF->r3dPts[j--]));
 		}
 		KF->coresIdx.clear();
 		KF->r3dPts.clear();
+
 		for (std::map<int, cv::Point3d>::iterator itMap = indexMap.begin(); itMap != indexMap.end(); ++itMap)
 		{
 			KF->coresIdx.push_back(itMap->first);
@@ -64,12 +69,12 @@ void RemoveRedundancyIdx()
 	}
 }
 
-bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat &prevFrameMat, cv::Mat &currFrameMat, char &m)
+bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat &prevFrameMat, cv::Mat &currFrameMat)
 {	
-	//keyFrames會一直增多
-	cout << "KeyFrame Set : " << keyFrames.size() << endl;
+	/*	KeyFrameSelection仍然有問題	*/
+	cout << "KeyFrame Sets : " << keyFrames.size() << endl;
 	if (Optimization.joinable())
-		Optimization.join();
+		Optimization.join();//等待multithread的部分做完
 	
 	FrameMetaData currData;
 	if (!FeatureDetection(3000, currData, currFrameMat)) return false;
@@ -90,15 +95,19 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 		if (currData.state == 'F')
 			return false;
 	}
-	else return false;
+	else
+	{
+		currData.state = 'F';
+		return false;
+	}
+
 	if (KeyFrameSelection(keyFrames.back(), currData))
 	{
 		CreateKeyFrame(cameraPara, currData, currFrameMat, keyFrames);
-		Optimization = std::thread(Triangulation, cameraPara, ref(keyFrames));
+		Optimization = std::thread(Triangulation, cameraPara, ref(keyFrames));//multithread
 		RemoveRedundancyIdx();
-		//Triangulation(cameraPara, keyFrames);
 	}
-	m = currData.state;
+
 	frameMetaDatas.push_back(currData);
 
 	return true;

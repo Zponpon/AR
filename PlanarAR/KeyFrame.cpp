@@ -101,19 +101,20 @@ void FindNeighboringKeyFrames(std::vector<KeyFrame> &keyFrames, FrameMetaData &c
 	/*	Use the last keyframe to find the neighboring keyframes	*/
 	int keyFramesSize = (int)keyFrames.size() - 1;
 	cv::Point2f originPt(400.0f, 300.0f);
-	for (std::vector<KeyFrame>::size_type i = 0; i < keyFramesSize; ++i)
+	int index = 0;
+	for (std::vector<KeyFrame>::iterator KF = keyFrames.begin(); index < keyFramesSize; ++index)
 	{
 		cv::Point3d r3dPt;
-		if (Find3DCoordinates(keyFrames[i].projMatrix, keyFrames.back().projMatrix, originPt, originPt, r3dPt))
+		if (Find3DCoordinates(KF->projMatrix, keyFrames.back().projMatrix, originPt, originPt, r3dPt))
 		{
 			Vector3d r3dPtVec;
-			r3dPtVec.x = (double)r3dPt.x; r3dPtVec.y = (double)r3dPt.y; r3dPtVec.z = (double)r3dPt.z;
-			if (isNegihboringKeyFrame(keyFrames[i].t, currData.t, r3dPtVec))
-				neighboringKeyFrameIdx.push_back(i);
+			r3dPtVec.x = r3dPt.x; r3dPtVec.y = r3dPt.y; r3dPtVec.z = r3dPt.z;
+			if (isNegihboringKeyFrame(KF->t, currData.t, r3dPtVec))
+				neighboringKeyFrameIdx.push_back(index);
 		}
 	}
-	int end = (int)keyFrames.size() - 1;
-	neighboringKeyFrameIdx.push_back(end);
+	/*	Push the last keyframe	*/
+	neighboringKeyFrameIdx.push_back(keyFramesSize);
 }
 
 bool KeyFrameSelection(KeyFrame &keyFramesBack, FrameMetaData &currData)

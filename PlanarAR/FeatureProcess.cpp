@@ -32,7 +32,7 @@ bool FeatureDetection(FeatureMap &featureMap, unsigned int minHessian)
 {
 	//Detect keypoints of featureMaps only
 	SurfDetection(featureMap.image, featureMap.keypoints, featureMap.descriptors, minHessian);
-	if ((int)featureMap.keypoints.size() == 0)
+	if (featureMap.keypoints.size() == 0)
 		return false;
 	return true;
 }
@@ -198,7 +198,6 @@ bool FeatureMatching(FeatureMap &featureMap, FrameMetaData &currData, cv::Mat &c
 	std::vector<cv::DMatch> matches;
 	FlannMatching(featureMap.descriptors, currData.descriptors, matches);
 	FindGoodMatches(featureMap, currFrameImg, currData.keypoints, matches, featureMapGoodMatches, currFrameGoodMatches);
-	//cout << "Surf Good Matches Size : " << currFrameGoodMatches.size() << std::endl;
 
 	//GoodMatches size is not enough
 	bool usingOpticalFlow = false;
@@ -226,7 +225,6 @@ bool FeatureMatching(FeatureMap &featureMap, FrameMetaData &currData, cv::Mat &c
 	if (usingOpticalFlow)
 	{
 		RemoveDuplicatePts(featureMapGoodMatches, currFrameGoodMatches);
-		//cout << "Surf + OpticalFlow Good Matches Size : " << currFrameGoodMatches.size() << std::endl;
 		if ((int)currFrameGoodMatches.size() < 30)
 		{
 			//std::vector<cv::DMatch>().swap(matches);
@@ -303,22 +301,22 @@ bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame
 	/* We use the last keyframe to find the neighboring keyframes in the keyframe set         */
 	/* Use these 3d points constructed by keyframes we found to estimate our camera pose(PnP) */
 
-//	cout << "Start matching scene with keyframes.\n";
+	cout << "Start matching scene with keyframes.\n";
 	if (keyFrames.size() < 2)
 	{
-		//cout << "KeyFrames size < 2\n";
+		cout << "KeyFrames size < 2\n";
 		return false;
 	}
 	FindNeighboringKeyFrames(keyFrames, currData, neighboringKeyFrameIdx);
 	if (neighboringKeyFrameIdx.size() == 0)
 	{
-		//cout << "Neighboring keyframe size is zero.\n";
+		cout << "Neighboring keyframe size is zero.\n";
 		return false;
 	}
-	for (std::size_t i = 0; i < neighboringKeyFrameIdx.size(); ++i)
+	for (std::vector<int>::iterator queryIdx = neighboringKeyFrameIdx.begin(); queryIdx != neighboringKeyFrameIdx.end(); ++queryIdx)
 	{
-		int index = neighboringKeyFrameIdx[i];
-		int r3dPtsCount = (int)keyFrames[index].r3dPts.size();
+		//int index = *queryIdx;
+		int r3dPtsCount = (int)keyFrames[*queryIdx].r3dPts.size();
 		if (r3dPtsCount > 0)
 		{
 			/*	This bug is from EstablishImageCorrespondences function
@@ -326,7 +324,7 @@ bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame
 			//	Initialize the descriptors
 			cv::Mat descriptors(r3dPtsCount, currData.descriptors.cols, currData.descriptors.type());
 			for (int j = 0; j < r3dPtsCount; ++j)
-				keyFrames[index].descriptors.row(keyFrames[index].coresIdx[j]).copyTo(descriptors.row(j));
+				keyFrames[*queryIdx].descriptors.row(keyFrames[*queryIdx].coresIdx[j]).copyTo(descriptors.row(j));
 
 			std::vector<cv::DMatch> matches, goodMatches;
 			FlannMatching(currData.descriptors, descriptors, matches);
@@ -336,16 +334,16 @@ bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame
 	}
 	if (goodMatchesSet.size() == 0)
 		return false;
-//	cout << "Matching scene with keyframes is end.\n";
+	cout << "Matching scene with keyframes is end.\n";
 	return true;
 }
 
 /*	Triangulation	*/
 void FeatureMatching(KeyFrame &query, KeyFrame &train, std::vector<cv::DMatch> &goodMatches)
 {
-	//cout << "Start Triangulation matching.\n";
+	cout << "Start Triangulation matching.\n";
 	std::vector<cv::DMatch> matches;
 	FlannMatching(query.descriptors, train.descriptors, matches);
 	FindGoodMatches(matches, goodMatches);
-	//cout << "Triangulation mathcing is end.\n";
+	cout << "Triangulation mathcing is end.\n";
 }
