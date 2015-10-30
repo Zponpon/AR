@@ -507,18 +507,6 @@ bool UpdateCameraIntrinsicParameters(double *cameraPara, MyMatrix &H)
 	}
 }
 
-/*void CreateFeatureMap(FeatureMap &featureMap, int minHessian)
-{
-	SurfDetection(featureMap.image, featureMap.keypoints, featureMap.descriptors, minHessian);
-
-	for (std::vector<cv::KeyPoint>::size_type i = 0; i < featureMap.keypoints.size(); ++i)
-	{
-		featureMap.keypoints[i].pt.x -= featureMap.image.cols / 2;
-		featureMap.keypoints[i].pt.y -= featureMap.image.rows / 2;
-		featureMap.keypoints[i].pt.y = -featureMap.keypoints[i].pt.y; // Because image y coordinate is positive in downward direction
-	}
-}*/
-
 void EstimateCameraTransformation(double *cameraPara, double trans[3][4], FeatureMap &featureMap, FrameMetaData &currData, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
 {
 	//Using homography to estimate camera pose

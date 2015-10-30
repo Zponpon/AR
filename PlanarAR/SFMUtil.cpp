@@ -617,7 +617,7 @@ void UpdateSFM_Features(KeyFrame &query, int imgIdx1, KeyFrame &train, int imgId
 
 void RemoveOutlier(KeyFrame &query, KeyFrame &train, std::vector<cv::DMatch> &goodMatches)
 {
-	//cout << "Starting remove outlier(keyframes)\n";
+	cout << "Starting remove outlier(keyframes)\n";
 	int ptCount = (int)goodMatches.size();
 	if (ptCount > 16)	return;
 
@@ -638,13 +638,12 @@ void RemoveOutlier(KeyFrame &query, KeyFrame &train, std::vector<cv::DMatch> &go
 		}
 	}
 //	cout << "Mask : " << mask << endl;
-//	cout << "Remove outlier is end.\n";
+	cout << "Remove outlier is end.\n";
 }
 
 void EstablishImageCorrespondences(std::vector<KeyFrame> &keyFrames)
 {
 	int imgIdx1 = 0, imgIdx2 = 1;
-	//cout << keyFrames.size() << endl;
 	//for (std::vector<KeyFrame>::iterator query = keyFrames.begin(); query != keyFrames.end(); ++query)
 	for (std::vector<KeyFrame>::size_type i = 0; i < keyFrames.size(); ++i)
 	{
@@ -653,8 +652,6 @@ void EstablishImageCorrespondences(std::vector<KeyFrame> &keyFrames)
 		for (std::vector<KeyFrame>::size_type j = i + 1; j < keyFrames.size(); ++j)
 		{
 			vector<cv::DMatch> goodMatches;
-			/*cout << "Query descriptor row : " << query->descriptors.rows << endl;
-			cout << "Trian descriptor row : " << train->descriptors.rows << endl;*/
 			FeatureMatching(keyFrames[i], keyFrames[j], goodMatches);
 			if (goodMatches.size() == 0)
 				imgIdx2++;
@@ -789,7 +786,7 @@ void Triangulation(double *cameraPara, std::vector<KeyFrame> &keyFrames)
 	//This process is done by another thread
 	int size = (int)keyFrames.size();
 	if (size < 2) return;
-	//cout << "Starting triangulation.\n";
+	cout << "Starting triangulation.\n";
 	vector<cv::Point3d> r3dPts;
 	EstablishImageCorrespondences(keyFrames);
 
@@ -828,6 +825,6 @@ void Triangulation(double *cameraPara, std::vector<KeyFrame> &keyFrames)
 	}
 
 	RemoveRedundantCorrespondences(keyFrames);
-	//cout << "Triangulation is end.\n";
+	cout << "Triangulation is end.\n";
 	//BundleAdjustment();
 }

@@ -5,6 +5,7 @@
 
 #include "SiftGPU.h"
 #include "string"
+#include "KeyFrame.h"
 #include "opencv2/opencv.hpp"
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -35,6 +36,7 @@ void DrawOpticalFlow(std::vector<cv::Point2f> preImg_goodmatches, std::vector<cv
 
 void WriteVideo();
 
-void WritePointsFile(std::vector<cv::Point2f>, std::vector<cv::Point2f>);
-void WriteRecordFile(unsigned long FrameCount, int GoodMatchesSize, int OpticalFlowKeyPointsSize);
+void SavingKeyFrame(std::string &fileName, cv::Mat &frame);
+
+void WriteMeasurementDataFile(vector <Measurement> &measurementData);
 #endif

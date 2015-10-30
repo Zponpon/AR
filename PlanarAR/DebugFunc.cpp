@@ -192,3 +192,19 @@ void WriteVideo()
 	}
 
 }
+
+void SavingKeyFrame(std::string &fileName, cv::Mat &frame)
+{
+	cv::imwrite(fileName, frame);
+	cv::imshow(fileName, frame);
+//	cv::waitKey(0);
+}
+
+void WriteMeasurementDataFile(std::vector<Measurement> &measurementData)
+{
+	std::fstream file("Measurement.txt", std::ios::out | std::ios::app);
+	file << "distance	|	angle\n";
+	for (int i = 0; i < measurementData.size(); ++i)
+		file << i << ". " << measurementData[i].distance << "	|	" << measurementData[i].angle << "\n";
+}
+

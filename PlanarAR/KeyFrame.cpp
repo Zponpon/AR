@@ -1,9 +1,14 @@
 #include <iostream>
 #include <cmath>
+#include <sstream>
+#include <string>
 #include "KeyFrame.h"
 #include "SFMUtil.h"
+#include "debugfunc.h"
 using std::cout;
 using std::endl;
+
+unsigned int keyFrameIdx = 1;
 
 
 void CreateProjMatrix(double *cameraPara, const MyMatrix &R, const Vector3d &t, MyMatrix &projMatrix)
@@ -39,16 +44,23 @@ void CreateKeyFrame(double *cameraPara, FrameMetaData &currData, cv::Mat &currFr
 	keyFrame.t = currData.t;
 	CreateProjMatrix(cameraPara, keyFrame.R, keyFrame.t, keyFrame.projMatrix);
 	keyFrames.push_back(keyFrame);
+	std::stringstream ss;
+	std::string fileName;
+	ss << "KeyFrame" << keyFrameIdx++ << ".jpg";
+	fileName = ss.str();
+	SavingKeyFrame(fileName, keyFrame.image);
 }
 
 double calcDistance(Vector3d &t1, Vector3d &t2)
 {
 	double t1Length = sqrt(pow(t1.x, 2.0) + pow(t1.y, 2.0) + pow(t1.z, 2.0));
 	double t2Length = sqrt(pow(t2.x, 2.0) + pow(t2.y, 2.0) + pow(t2.z, 2.0));
+	//Cosine值？!
 	double Cosine = (t1.x*t2.x + t1.y*t2.y + t1.z*t2.z) / (t1Length*t2Length);
 	double theta = acos(Cosine);
 	if (theta > 90)
 		return 0.00;
+	cout << "Theta : " << theta;
 	//畫出一個三角形就知道了
 	double distance = sqrt(pow(t1Length, 2.0) + pow(t2Length, 2.0) - 2 * t1Length*t2Length*Cosine);
 	return distance;
@@ -117,15 +129,18 @@ void FindNeighboringKeyFrames(std::vector<KeyFrame> &keyFrames, FrameMetaData &c
 	neighboringKeyFrameIdx.push_back(keyFramesSize);
 }
 
-bool KeyFrameSelection(KeyFrame &keyFramesBack, FrameMetaData &currData)
+bool KeyFrameSelection(KeyFrame &keyFramesBack, FrameMetaData &currData, vector <Measurement> &measurementData)
 {
 	double distance = calcDistance(keyFramesBack.t, currData.t);
-	if(distance < 150.0)
+	if(distance < 150.0 || isnan(distance))
 		return false;
 	double angle = calcAngle(keyFramesBack.R, currData.R);
-	//	計算出來的角度Theat極小
 	if (angle < 0.15 || isnan(angle))
 		return false;
 
+	Measurement measurement;
+	measurement.distance = distance;
+	measurement.angle = angle;
+	measurementData.push_back(measurement);
 	return true;
 }

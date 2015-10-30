@@ -11,7 +11,9 @@ static vector<FrameMetaData> frameMetaDatas;
 //static vector<FeatureMap> featureMaps;
 static vector<KeyFrame> keyFrames;
 static std::thread Optimization;
+static vector <Measurement> measurementData;
 
+static int index = 1;
 
 void LoadFeatureMaps(int argc, char *argv[])
 {
@@ -37,6 +39,7 @@ void StopMultiThread()
 {
 	using std::chrono::system_clock;
 	std::this_thread::sleep_until(system_clock::now());
+	WriteMeasurementDataFile(measurementData);
 }
 
 char EstimationMethod()
@@ -54,8 +57,10 @@ void RemoveRedundancyIdx()
 
 		int i = (int)KF->coresIdx.size() - 1;
 		int j = (int)KF->r3dPts.size() - 1;
+		cout << i << " " << j << endl;
 		while (i & j)
 		{
+			//BUG
 			indexMap.insert(std::pair<int, cv::Point3d>(KF->coresIdx[i--], KF->r3dPts[j--]));
 		}
 		KF->coresIdx.clear();
@@ -68,13 +73,28 @@ void RemoveRedundancyIdx()
 		}
 	}
 }
+/*
+void KeyFrameTesting()
+{
+	keyFrames.resize(5);
+	keyFrames[0].image = cv::imread("KeyFrames/KeyFrames1.jpg");
+	keyFrames[1].image = cv::imread("KeyFrames/KeyFrames2.jpg");
+	keyFrames[2].image = cv::imread("KeyFrames/KeyFrames3.jpg");
+	keyFrames[3].image = cv::imread("KeyFrames/KeyFrames4.jpg");
+	keyFrames[5].image = cv::imread("KeyFrames/KeyFrames5.jpg");
+
+}
+*/
 
 bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat &prevFrameMat, cv::Mat &currFrameMat)
 {	
 	/*	KeyFrameSelection仍然有問題	*/
 	cout << "KeyFrame Sets : " << keyFrames.size() << endl;
 	if (Optimization.joinable())
+	{
 		Optimization.join();//等待multithread的部分做完
+		RemoveRedundancyIdx();
+	}
 	
 	FrameMetaData currData;
 	if (!FeatureDetection(3000, currData, currFrameMat)) return false;
@@ -100,14 +120,14 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 		currData.state = 'F';
 		return false;
 	}
-
-	if (KeyFrameSelection(keyFrames.back(), currData))
+	if (KeyFrameSelection(keyFrames.back(), currData, measurementData))
 	{
-		CreateKeyFrame(cameraPara, currData, currFrameMat, keyFrames);
-		Optimization = std::thread(Triangulation, cameraPara, ref(keyFrames));//multithread
-		RemoveRedundancyIdx();
+		if (keyFrames.size() < 4)
+		{
+			CreateKeyFrame(cameraPara, currData, currFrameMat, keyFrames);
+			Optimization = std::thread(Triangulation, cameraPara, ref(keyFrames));//multithread
+		}
 	}
-
 	frameMetaDatas.push_back(currData);
 
 	return true;

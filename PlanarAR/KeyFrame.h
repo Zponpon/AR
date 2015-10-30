@@ -39,10 +39,16 @@ public:
 	Vector3d t;
 };
 
+struct Measurement
+{
+	double angle;
+	double distance;
+};
+
 void CreateKeyFrame(double *cameraPara, FrameMetaData &currFrame, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames);
 
 void FindNeighboringKeyFrames(std::vector<KeyFrame> &keyFrames, FrameMetaData &currFrame, std::vector<int> &goodKeyFrameIdx);
 
-bool KeyFrameSelection(KeyFrame &last, FrameMetaData &currFrame);
+bool KeyFrameSelection(KeyFrame &last, FrameMetaData &currFrame, vector <Measurement> &measurementData);
 
 #endif
