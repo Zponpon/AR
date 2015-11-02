@@ -209,11 +209,10 @@ void display(void)
 	if( VI.isFrameNew(dev))	
 	{
 		VI.getPixels(dev, frame, true, true);
-		//For video
-#ifdef WRITEVIDEO
-		prevFrame = new unsigned char[VI.getSize(dev)];
-		WriteVideo(writer, frame, FrameCount);
-#endif
+		#ifdef WRITEVIDEO
+			prevFrame = new unsigned char[VI.getSize(dev)];
+			WriteVideo(writer, frame, FrameCount);
+		#endif
 		DisplayFlipImage(frame);
 	}
 	else return;
@@ -243,24 +242,22 @@ void display(void)
 
 		glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 		char method = EstimationMethod();
-		if (method == 'F')
-			std::cout << "PnP failed\n";
 		if (method == 'H')
 		{
 			glTranslated(0.0, 0.0, 50.0);
 			glRotated(90.0, 1.0, 0.0, 0.0);
 			glutWireTeapot(100.0);
 		}
-		if (method == 'P')
+		else if (method == 'P')
 		{
-			glTranslated(400.0, 300.0, 50.0);
+			glTranslated(0.0, 300.0, 50.0);
 			glRotated(90.0, 1.0, 0.0, 0.0);
 			glutWireCube(100.0);
 		}
 	}
 	glutSwapBuffers();
 	FrameCount++;
-	if (prevFrame!=NULL)	delete[]prevFrame;
+	if (prevFrame!=NULL) delete[]prevFrame;
 }
 
 void KeyboardFunc(unsigned char key, int x, int y)

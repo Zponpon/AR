@@ -196,7 +196,7 @@ void WriteVideo()
 void SavingKeyFrame(std::string &fileName, cv::Mat &frame)
 {
 	cv::imwrite(fileName, frame);
-	cv::imshow(fileName, frame);
+//	cv::imshow(fileName, frame);
 //	cv::waitKey(0);
 }
 

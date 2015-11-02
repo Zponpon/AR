@@ -15,6 +15,7 @@ static vector <Measurement> measurementData;
 
 static int index = 1;
 
+
 void LoadFeatureMaps(int argc, char *argv[])
 {
 	//Read a file
@@ -51,25 +52,24 @@ char EstimationMethod()
 void RemoveRedundancyIdx()
 {
 	/*	刪除重複的對應點	*/
+	//After Triangulation
 	for (vector<KeyFrame>::iterator KF = keyFrames.begin(); KF != keyFrames.end(); ++KF)
 	{
 		std::map<int, cv::Point3d> indexMap;
-
 		int i = (int)KF->coresIdx.size() - 1;
 		int j = (int)KF->r3dPts.size() - 1;
-		cout << i << " " << j << endl;
+		
 		while (i & j)
 		{
-			//BUG
 			indexMap.insert(std::pair<int, cv::Point3d>(KF->coresIdx[i--], KF->r3dPts[j--]));
 		}
 		KF->coresIdx.clear();
 		KF->r3dPts.clear();
 
-		for (std::map<int, cv::Point3d>::iterator itMap = indexMap.begin(); itMap != indexMap.end(); ++itMap)
+		for (std::map<int, cv::Point3d>::iterator index = indexMap.begin(); index != indexMap.end(); ++index)
 		{
-			KF->coresIdx.push_back(itMap->first);
-			KF->r3dPts.push_back(itMap->second);
+			KF->coresIdx.push_back(index->first);
+			KF->r3dPts.push_back(index->second);
 		}
 	}
 }
@@ -102,12 +102,15 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 	vector<cv::Point2f> currFrameGoodMatches, featureMapGoodMatches;
 	vector<int> neighboringKeyFrameIdx;
 	vector< vector<cv::DMatch> > goodMatchesSet;
-	
+
 	if (FeatureMatching(featureMap, currData, currFrameMat, prevFrameMat, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
 	{
 		EstimateCameraTransformation(cameraPara, trans, featureMap, currData, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers);
 		if (keyFrames.size() == 0)
+		{
 			CreateKeyFrame(cameraPara, currData, currFrameMat, keyFrames);
+			currData.state = 'I';
+		}
 	}
 	else if (FeatureMatching(cameraPara, keyFrames, currData, currFrameMat, neighboringKeyFrameIdx, goodMatchesSet))
 	{
@@ -115,19 +118,18 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 		if (currData.state == 'F')
 			return false;
 	}
-	else
-	{
-		currData.state = 'F';
-		return false;
-	}
+	else return false;
 	if (KeyFrameSelection(keyFrames.back(), currData, measurementData))
 	{
 		if (keyFrames.size() < 4)
 		{
 			CreateKeyFrame(cameraPara, currData, currFrameMat, keyFrames);
-			Optimization = std::thread(Triangulation, cameraPara, ref(keyFrames));//multithread
+			//move-assign thread
+			Optimization = std::thread(Triangulation, cameraPara, ref(keyFrames));
 		}
 	}
+	if (currData.state == 'I')
+		currData.state = 'H';
 	frameMetaDatas.push_back(currData);
 
 	return true;

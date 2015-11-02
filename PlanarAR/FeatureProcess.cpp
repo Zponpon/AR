@@ -214,10 +214,6 @@ bool FeatureMatching(FeatureMap &featureMap, FrameMetaData &currData, cv::Mat &c
 			prevFeatureMapInliers.swap(featureMapGoodMatches);
 			prevFrameInliers.swap(currFrameGoodMatches);
 
-			//std::vector<cv::DMatch>().swap(matches);
-			//std::vector<cv::KeyPoint>().swap(currData.keypoints);
-			//std::vector<cv::Point2f>().swap(featureMapGoodMatches);
-			//std::vector<cv::Point2f>().swap(currFrameGoodMatches);
 			return false;
 		}
 	}
@@ -226,17 +222,9 @@ bool FeatureMatching(FeatureMap &featureMap, FrameMetaData &currData, cv::Mat &c
 	{
 		RemoveDuplicatePts(featureMapGoodMatches, currFrameGoodMatches);
 		if ((int)currFrameGoodMatches.size() < 30)
-		{
-			//std::vector<cv::DMatch>().swap(matches);
-			/*std::vector<cv::KeyPoint>().swap(currData.keypoints);
-			std::vector<cv::Point2f>().swap(featureMapGoodMatches);
-			std::vector<cv::Point2f>().swap(currFrameGoodMatches);
-			*/
 			return false;
-		}
 	}
 
-	//std::vector<cv::DMatch>().swap(matches);
 	return true;
 }
 
@@ -315,12 +303,9 @@ bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame
 	}
 	for (std::vector<int>::iterator queryIdx = neighboringKeyFrameIdx.begin(); queryIdx != neighboringKeyFrameIdx.end(); ++queryIdx)
 	{
-		//int index = *queryIdx;
 		int r3dPtsCount = (int)keyFrames[*queryIdx].r3dPts.size();
 		if (r3dPtsCount > 0)
 		{
-			/*	This bug is from EstablishImageCorrespondences function
-				Each coresIdx is -1*/
 			//	Initialize the descriptors
 			cv::Mat descriptors(r3dPtsCount, currData.descriptors.cols, currData.descriptors.type());
 			for (int j = 0; j < r3dPtsCount; ++j)
@@ -332,9 +317,10 @@ bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame
 			goodMatchesSet.push_back(goodMatches);
 		}
 	}
-	if (goodMatchesSet.size() == 0)
-		return false;
+	if (goodMatchesSet.size() == 0)	return false;
+
 	cout << "Matching scene with keyframes is end.\n";
+
 	return true;
 }
 
