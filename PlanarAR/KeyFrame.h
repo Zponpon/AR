@@ -45,10 +45,10 @@ struct Measurement
 	double distance;
 };
 
-void CreateKeyFrame(double *cameraPara, FrameMetaData &currFrame, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames);
+void CreateKeyFrame(MyMatrix &K, FrameMetaData &currFrame, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames);
 
 void FindNeighboringKeyFrames(std::vector<KeyFrame> &keyFrames, FrameMetaData &currFrame, std::vector<int> &goodKeyFrameIdx);
 
-bool KeyFrameSelection(KeyFrame &last, FrameMetaData &currFrame, vector <Measurement> &measurementData);
+bool KeyFrameSelection(MyMatrix &K, KeyFrame &back, FrameMetaData &currFrame, vector <Measurement> &measurementData);
 
 #endif

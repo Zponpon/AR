@@ -250,7 +250,7 @@ void display(void)
 		}
 		else if (method == 'P')
 		{
-			glTranslated(0.0, 300.0, 50.0);
+			glTranslated(400.0, 300.0, 50.0);
 			glRotated(90.0, 1.0, 0.0, 0.0);
 			glutWireCube(100.0);
 		}

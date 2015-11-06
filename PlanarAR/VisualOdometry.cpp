@@ -12,9 +12,14 @@ static vector<FrameMetaData> frameMetaDatas;
 static vector<KeyFrame> keyFrames;
 static std::thread Optimization;
 static vector <Measurement> measurementData;
-
 static int index = 1;
+static MyMatrix K(3, 3); // Camera Matrix
 
+void SetCameraMatrix(double *cameraPara)
+{
+	for (int i = 0; i < 9; ++i)
+		K.m_lpdEntries[i] = cameraPara[i];
+}
 
 void LoadFeatureMaps(int argc, char *argv[])
 {
@@ -88,8 +93,8 @@ void KeyFrameTesting()
 
 bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat &prevFrameMat, cv::Mat &currFrameMat)
 {	
-	/*	KeyFrameSelection仍然有問題	*/
-	cout << "KeyFrame Sets : " << keyFrames.size() << endl;
+	if (keyFrames.size() == 0)
+		SetCameraMatrix(cameraPara);
 	if (Optimization.joinable())
 	{
 		Optimization.join();//等待multithread的部分做完
@@ -108,7 +113,7 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 		EstimateCameraTransformation(cameraPara, trans, featureMap, currData, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers);
 		if (keyFrames.size() == 0)
 		{
-			CreateKeyFrame(cameraPara, currData, currFrameMat, keyFrames);
+			CreateKeyFrame(K, currData, currFrameMat, keyFrames);
 			currData.state = 'I';
 		}
 	}
@@ -119,11 +124,11 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 			return false;
 	}
 	else return false;
-	if (KeyFrameSelection(keyFrames.back(), currData, measurementData))
+	if (KeyFrameSelection(K, keyFrames.back(), currData, measurementData))
 	{
 		if (keyFrames.size() < 4)
 		{
-			CreateKeyFrame(cameraPara, currData, currFrameMat, keyFrames);
+			CreateKeyFrame(K, currData, currFrameMat, keyFrames);
 			//move-assign thread
 			Optimization = std::thread(Triangulation, cameraPara, ref(keyFrames));
 		}
