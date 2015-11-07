@@ -51,15 +51,17 @@ void CreateKeyFrame(MyMatrix &K, FrameMetaData &currData, cv::Mat &currFrameImg,
 	SavingKeyFrame(fileName, keyFrame.image);
 }
 
-double calcDistance(Vector3d &t1, Vector3d &t2)
+double calcDistance(Vector3d &t1, Vector3d &t2, double &angle)
 {
 	double t1Length = sqrt(pow(t1.x, 2.0) + pow(t1.y, 2.0) + pow(t1.z, 2.0));
 	double t2Length = sqrt(pow(t2.x, 2.0) + pow(t2.y, 2.0) + pow(t2.z, 2.0));
 	double Cosine = (t1.x*t2.x + t1.y*t2.y + t1.z*t2.z) / (t1Length*t2Length);
 	double theta = acos(Cosine) * 180 / PI;
+	//angle = theta;
 	if (theta > 90)
 		return 0.00;
-
+	//計算t跟m3的夾角
+	//分別計算
 	double distance = sqrt(pow(t1Length, 2.0) + pow(t2Length, 2.0) - 2 * t1Length*t2Length*Cosine);
 
 	return distance;
@@ -95,16 +97,14 @@ void WorldToCamera(MyMatrix &R, Vector3d &t, cv::Point3d &r3dPt, Vector3d &r3dVe
 	//To world coordinate to camera coordinate
 
 	MyMatrix pt(3, 1); 
-	MyMatrix invR(3, 3);
+
+	//Translation t'
+	pt.m_lpdEntries[0] = r3dPt.x + t.x;
+	pt.m_lpdEntries[1] = r3dPt.y + t.y;
+	pt.m_lpdEntries[2] = r3dPt.z + t.z;
 
 	//Rotation
-	R.Inverse(&invR);
-	pt = invR * pt;
-
-	//Translation
-	pt.m_lpdEntries[0] = r3dPt.x - t.x;
-	pt.m_lpdEntries[1] = r3dPt.y - t.y;
-	pt.m_lpdEntries[2] = r3dPt.z - t.z;
+	pt = R * pt;
 
 	//Vector
 	r3dVec.x = pt.m_lpdEntries[0];
@@ -165,10 +165,11 @@ bool KeyFrameSelection(MyMatrix &K, KeyFrame &keyFramesBack, FrameMetaData &curr
 {
 	if (currData.state == 'I')
 		return false;
-	double distance = calcDistance(keyFramesBack.t, currData.t);
+	double angle;
+	double distance = calcDistance(keyFramesBack.t, currData.t, angle);
 	if(distance < 150.0 || isnan(distance))
 		return false;
-	double angle = calcAngle(K, keyFramesBack.R, currData.R);
+	//angle = calcAngle(K, keyFramesBack.R, currData.R);
 	if (angle < 30.0f || isnan(angle))
 		return false;
 

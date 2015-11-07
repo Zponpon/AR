@@ -544,7 +544,6 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], Featur
 	trans[2][1] = R.m_lpdEntries[7];
 	trans[2][2] = R.m_lpdEntries[8];
 	trans[2][3] = t.z;
-
 	currData.R = R;
 	currData.t = t;
 	currData.timeStamp = clock() / CLOCKS_PER_SEC;
