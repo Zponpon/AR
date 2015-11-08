@@ -292,7 +292,7 @@ bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame
 	cout << "Start matching scene with keyframes.\n";
 	if (keyFrames.size() < 2)
 	{
-		cout << "KeyFrames size < 2\n";
+		//cout << "KeyFrames size < 2\n";
 		return false;
 	}
 	FindNeighboringKeyFrames(keyFrames, currData, neighboringKeyFrameIdx);

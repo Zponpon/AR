@@ -51,10 +51,10 @@ void CreateKeyFrame(MyMatrix &K, FrameMetaData &currData, cv::Mat &currFrameImg,
 	SavingKeyFrame(fileName, keyFrame.image);
 }
 
-double calcDistance(Vector3d &t1, Vector3d &t2, double &angle)
+double calcDistance(Vector3d &t1, Vector3d &t2, double angle)
 {
-	double t1Length = sqrt(pow(t1.x, 2.0) + pow(t1.y, 2.0) + pow(t1.z, 2.0));
-	double t2Length = sqrt(pow(t2.x, 2.0) + pow(t2.y, 2.0) + pow(t2.z, 2.0));
+	double t1Length = sqrt(t1.x*t1.x + t1.y*t1.y + t1.z*t1.z);
+	double t2Length = sqrt(t2.x*t2.x + t2.y*t2.y + t2.z*t2.z);
 	double Cosine = (t1.x*t2.x + t1.y*t2.y + t1.z*t2.z) / (t1Length*t2Length);
 	double theta = acos(Cosine) * 180 / PI;
 	//angle = theta;
@@ -62,7 +62,7 @@ double calcDistance(Vector3d &t1, Vector3d &t2, double &angle)
 		return 0.00;
 	//計算t跟m3的夾角
 	//分別計算
-	double distance = sqrt(pow(t1Length, 2.0) + pow(t2Length, 2.0) - 2 * t1Length*t2Length*Cosine);
+	double distance = sqrt(pow(t1Length, 2) + pow(t2Length, 2) - 2 * t1Length*t2Length*Cosine);
 
 	return distance;
 }
@@ -72,16 +72,15 @@ double calcAngle(MyMatrix &K, MyMatrix &R1, MyMatrix &R2)
 	//相機方向
 	Vector3d R1Col2, R2Col2;
 	MyMatrix KR1(3, 3), KR2(3, 3);
+
 	KR1 = K*R1;
 	KR2 = K*R2;
-	double det1 = KR1.Determine();
-	double det2 = KR2.Determine();
-	R1Col2.x = det1*R1.m_lpdEntries[2];
-	R1Col2.y = det1*R1.m_lpdEntries[5];
-	R1Col2.z = det1*R1.m_lpdEntries[8];
-	R2Col2.x = det2*R2.m_lpdEntries[2];
-	R2Col2.y = det2*R2.m_lpdEntries[5];
-	R2Col2.z = det2*R2.m_lpdEntries[8];
+	R1Col2.x = KR1.Determine()*R1.m_lpdEntries[2];
+	R1Col2.y = KR1.Determine()*R1.m_lpdEntries[5];
+	R1Col2.z = KR1.Determine()*R1.m_lpdEntries[8];
+	R2Col2.x = KR2.Determine()*R2.m_lpdEntries[2];
+	R2Col2.y = KR2.Determine()*R2.m_lpdEntries[5];
+	R2Col2.z = KR2.Determine()*R2.m_lpdEntries[8];
 
 	double R1Length = sqrt(R1Col2.x*R1Col2.x + R1Col2.y*R1Col2.y + R1Col2.z*R1Col2.z);
 	double R2Length = sqrt(R2Col2.x*R2Col2.x + R2Col2.y*R2Col2.y + R2Col2.z*R2Col2.z);
@@ -94,7 +93,7 @@ double calcAngle(MyMatrix &K, MyMatrix &R1, MyMatrix &R2)
 
 void WorldToCamera(MyMatrix &R, Vector3d &t, cv::Point3d &r3dPt, Vector3d &r3dVec)
 {
-	//To world coordinate to camera coordinate
+	//From world coordinate to camera coordinate
 
 	MyMatrix pt(3, 1); 
 
@@ -103,7 +102,7 @@ void WorldToCamera(MyMatrix &R, Vector3d &t, cv::Point3d &r3dPt, Vector3d &r3dVe
 	pt.m_lpdEntries[1] = r3dPt.y + t.y;
 	pt.m_lpdEntries[2] = r3dPt.z + t.z;
 
-	//Rotation
+	//Rotation R
 	pt = R * pt;
 
 	//Vector
@@ -138,9 +137,9 @@ bool isNegihboringKeyFrame(Vector3d &t1, Vector3d &t2, Vector3d &r3dVec1, Vector
 
 void FindNeighboringKeyFrames(std::vector<KeyFrame> &keyFrames, FrameMetaData &currData, std::vector<int> &neighboringKeyFrameIdx)
 {
-	/*	Use the last keyframe to find the neighboring keyframes	*/
-	//用最新的一張keyframe去找尋整個set
-	//並找出跟最後一張keyframe相鄰的keyframe
+	/*	Use the last keyframe for finding the neighboring keyframes	*/
+	//感覺怪怪der
+	//先改成全部比對
 	int keyFramesSize = (int)keyFrames.size() - 1;
 	cv::Point2f originPt(400.0f, 300.0f);
 	int index = 0;
@@ -167,9 +166,11 @@ bool KeyFrameSelection(MyMatrix &K, KeyFrame &keyFramesBack, FrameMetaData &curr
 		return false;
 	double angle;
 	double distance = calcDistance(keyFramesBack.t, currData.t, angle);
+	cout << "Distance : " << distance << endl;
 	if(distance < 150.0 || isnan(distance))
 		return false;
-	//angle = calcAngle(K, keyFramesBack.R, currData.R);
+	angle = calcAngle(K, keyFramesBack.R, currData.R);
+	cout <<"Angle : " << angle << endl;
 	if (angle < 30.0f || isnan(angle))
 		return false;
 

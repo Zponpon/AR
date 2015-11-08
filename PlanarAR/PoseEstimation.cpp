@@ -535,6 +535,7 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], Featur
 	trans[0][0] = R.m_lpdEntries[0];
 	trans[0][1] = R.m_lpdEntries[1];
 	trans[0][2] = R.m_lpdEntries[2];
+
 	trans[0][3] = t.x;
 	trans[1][0] = R.m_lpdEntries[3];
 	trans[1][1] = R.m_lpdEntries[4];
@@ -584,14 +585,16 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 	cv::Mat rVec, t, inliers;
 	cv::solvePnPRansac(matching3DPts, matching2DPts, K, distCoeffs, rVec, t, false, 100, 8.0, 100, inliers);
 
-	//Tranform rotation vector to rotation matrix
+	//Rotation vector to rotation matrix
 	cv::Mat R;
 	cv::Rodrigues(rVec, R);
 
 	//Initialize the current FrameMetaData
+	//回LAB試試看把at改成ptr
 	currData.R.CreateMatrix(3, 3);
 	for (int i = 0; i < 9; ++i)
 		currData.R.m_lpdEntries[i] = R.at<double>(i);
+
 	currData.t.x = t.at<double>(0); currData.t.y = t.at<double>(1); currData.t.z = t.at<double>(2);
 	currData.timeStamp = clock() / CLOCKS_PER_SEC;
 	currData.state = 'P';

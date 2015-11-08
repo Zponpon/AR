@@ -124,7 +124,7 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 			return false;
 	}
 	else return false;
-	if (KeyFrameSelection(K, keyFrames.back(), currData, measurementData))
+	if (KeyFrameSelection(K, keyFrames.back(), currData, measurementData) && currData.state != 'I')
 	{
 		if (keyFrames.size() < 4)
 		{
