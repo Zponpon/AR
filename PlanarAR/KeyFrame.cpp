@@ -50,60 +50,95 @@ void CreateKeyFrame(MyMatrix &K, FrameMetaData &currData, cv::Mat &currFrameImg,
 	fileName = fileNameStream.str();
 	SavingKeyFrame(fileName, keyFrame.image);
 }
-
+ 
+/*
 double calcDistance(Vector3d &t1, Vector3d &t2, double angle)
 {
 	double t1Length = sqrt(t1.x*t1.x + t1.y*t1.y + t1.z*t1.z);
 	double t2Length = sqrt(t2.x*t2.x + t2.y*t2.y + t2.z*t2.z);
+	if (t1Length == 0.0f || t2Length == 0.0f)
+		return 0.0f;
+
 	double Cosine = (t1.x*t2.x + t1.y*t2.y + t1.z*t2.z) / (t1Length*t2Length);
 	double theta = acos(Cosine) * 180 / PI;
 	//angle = theta;
 	if (theta > 90)
 		return 0.00;
-	//計算t跟m3的夾角
-	//分別計算
-	double distance = sqrt(pow(t1Length, 2) + pow(t2Length, 2) - 2 * t1Length*t2Length*Cosine);
-
+	//cout << theta << endl;
+	double distance = sqrt(t1Length*t1Length + t2Length*t2Length - 2 * t1Length*t2Length*Cosine);
 	return distance;
+}
+*/
+
+double calcDistance(Vector3d &t1, Vector3d &t2)
+{
+	return sqrt((t1.x - t2.x)*(t1.x - t2.x) + (t1.y - t2.y)*(t1.y - t2.y) + (t1.z - t2.z)*(t1.z - t2.z));
 }
 
 double calcAngle(MyMatrix &K, MyMatrix &R1, MyMatrix &R2)
 {
 	//相機方向
 	Vector3d R1Col2, R2Col2;
+
 	MyMatrix KR1(3, 3), KR2(3, 3);
 
 	KR1 = K*R1;
 	KR2 = K*R2;
-	R1Col2.x = KR1.Determine()*R1.m_lpdEntries[2];
-	R1Col2.y = KR1.Determine()*R1.m_lpdEntries[5];
-	R1Col2.z = KR1.Determine()*R1.m_lpdEntries[8];
-	R2Col2.x = KR2.Determine()*R2.m_lpdEntries[2];
-	R2Col2.y = KR2.Determine()*R2.m_lpdEntries[5];
-	R2Col2.z = KR2.Determine()*R2.m_lpdEntries[8];
+	double det1 = KR1.Determine();
+	double det2 = KR2.Determine();
+
+	R1Col2.x = det1*R1.m_lpdEntries[2];
+	R1Col2.y = det1*R1.m_lpdEntries[5];
+	R1Col2.z = det1*R1.m_lpdEntries[8];
+	R2Col2.x = det2*R2.m_lpdEntries[2];
+	R2Col2.y = det2*R2.m_lpdEntries[5];
+	R2Col2.z = det2*R2.m_lpdEntries[8];
 
 	double R1Length = sqrt(R1Col2.x*R1Col2.x + R1Col2.y*R1Col2.y + R1Col2.z*R1Col2.z);
 	double R2Length = sqrt(R2Col2.x*R2Col2.x + R2Col2.y*R2Col2.y + R2Col2.z*R2Col2.z);
 	double Cosine = (R1Col2.x*R2Col2.x + R1Col2.y*R2Col2.y + R1Col2.z*R2Col2.z)/(R1Length*R2Length);
 	double angle = acos(Cosine) * 180 / PI;
-	cout <<"Angle :"<< Cosine << " "<< acos(Cosine) << " " << angle << endl;
+	cout << "Angle :" << " " << angle << endl;
 
 	return angle;
 }
 
+bool KeyFrameSelection(MyMatrix &K, KeyFrame &keyFramesBack, FrameMetaData &currData, vector <Measurement> &measurementData)
+{
+	if (currData.state == 'I')
+		return false;
+	double distance = calcDistance(keyFramesBack.t, currData.t);
+	if (distance < 300.0f || isnan(distance))
+		return false;
+	double angle = calcAngle(K, keyFramesBack.R, currData.R);
+	if (angle < 15.0f || isnan(angle))
+		return false;
+
+	Measurement measurement;
+	measurement.distance = distance;
+	measurement.angle = angle;
+	measurementData.push_back(measurement);
+	return true;
+}
+
+
+/*	Finding neighboring keyframe	*/
 void WorldToCamera(MyMatrix &R, Vector3d &t, cv::Point3d &r3dPt, Vector3d &r3dVec)
 {
 	//From world coordinate to camera coordinate
 
 	MyMatrix pt(3, 1); 
+	//重新看一次，老師給的書
+	//Rotation R
+	pt.m_lpdEntries[0] = r3dPt.x;
+	pt.m_lpdEntries[1] = r3dPt.y;
+	pt.m_lpdEntries[2] = r3dPt.z;
+	pt = R * pt;
 
 	//Translation t'
-	pt.m_lpdEntries[0] = r3dPt.x + t.x;
-	pt.m_lpdEntries[1] = r3dPt.y + t.y;
-	pt.m_lpdEntries[2] = r3dPt.z + t.z;
-
-	//Rotation R
-	pt = R * pt;
+	pt.m_lpdEntries[0] = r3dPt.x+t.x;
+	pt.m_lpdEntries[1] = r3dPt.y+t.y;
+	pt.m_lpdEntries[2] = r3dPt.z+t.z;
 
 	//Vector
 	r3dVec.x = pt.m_lpdEntries[0];
@@ -145,7 +180,7 @@ void FindNeighboringKeyFrames(std::vector<KeyFrame> &keyFrames, FrameMetaData &c
 	int index = 0;
 	for (std::vector<KeyFrame>::iterator KF = keyFrames.begin(); index < keyFramesSize; ++index)
 	{
-		cv::Point3d r3dPt;
+		/*cv::Point3d r3dPt;
 		if (Find3DCoordinates(KF->projMatrix, keyFrames.back().projMatrix, originPt, originPt, r3dPt))
 		{
 			Vector3d r3dVec1, r3dVec2;
@@ -154,29 +189,9 @@ void FindNeighboringKeyFrames(std::vector<KeyFrame> &keyFrames, FrameMetaData &c
 
 			if (isNegihboringKeyFrame(KF->t, keyFrames.back().t, r3dVec1, r3dVec2))
 				neighboringKeyFrameIdx.push_back(index);
-		}
+		}*/
+		neighboringKeyFrameIdx.push_back(index);
 	}
 	//	Push the last keyframe
 	neighboringKeyFrameIdx.push_back(keyFramesSize);
-}
-
-bool KeyFrameSelection(MyMatrix &K, KeyFrame &keyFramesBack, FrameMetaData &currData, vector <Measurement> &measurementData)
-{
-	if (currData.state == 'I')
-		return false;
-	double angle;
-	double distance = calcDistance(keyFramesBack.t, currData.t, angle);
-	cout << "Distance : " << distance << endl;
-	if(distance < 150.0 || isnan(distance))
-		return false;
-	angle = calcAngle(K, keyFramesBack.R, currData.R);
-	cout <<"Angle : " << angle << endl;
-	if (angle < 30.0f || isnan(angle))
-		return false;
-
-	Measurement measurement;
-	measurement.distance = distance;
-	measurement.angle = angle;
-	measurementData.push_back(measurement);
-	return true;
 }

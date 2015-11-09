@@ -124,13 +124,14 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 			return false;
 	}
 	else return false;
-	if (KeyFrameSelection(K, keyFrames.back(), currData, measurementData) && currData.state != 'I')
+	if (KeyFrameSelection(K, keyFrames.back(), currData, measurementData))
 	{
-		if (keyFrames.size() < 4)
+		if (keyFrames.size() < 2)
 		{
 			CreateKeyFrame(K, currData, currFrameMat, keyFrames);
+			Triangulation(cameraPara, keyFrames);
 			//move-assign thread
-			Optimization = std::thread(Triangulation, cameraPara, ref(keyFrames));
+			//Optimization = std::thread(Triangulation, cameraPara, ref(keyFrames));
 		}
 	}
 	if (currData.state == 'I')

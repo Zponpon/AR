@@ -584,7 +584,12 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 		K.at<double>(i) = cameraPara[i];
 	cv::Mat rVec, t, inliers;
 	cv::solvePnPRansac(matching3DPts, matching2DPts, K, distCoeffs, rVec, t, false, 100, 8.0, 100, inliers);
-
+	if (inliers.rows < 4)
+	{
+		cout << "SolveRansacPnP's inliers size < 4\n";
+		currData.state = 'F';
+		return;
+	}
 	//Rotation vector to rotation matrix
 	cv::Mat R;
 	cv::Rodrigues(rVec, R);
@@ -611,5 +616,6 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 	trans[2][1] = currData.R.m_lpdEntries[7];
 	trans[2][2] = currData.R.m_lpdEntries[8];
 	trans[2][3] = currData.t.z;
+
 	cout << "PoseEstimation by PnP is successful.\n";
 }

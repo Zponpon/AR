@@ -142,7 +142,6 @@ void FindGoodMatches(FeatureMap &featureMap, cv::Mat &currFrame, std::vector<cv:
 		if (dist > max_dist) max_dist = dist;
 	}
 	cout << "(max, min) : (" << max_dist << ", " << min_dist << ")\n\n";
-	//DebugOpenCVMarkPoint(frame, keypoints_frame, "inputFrame.jpg");
 	//	Find the good matches
 	min_dist *= 2.0;
 	if (min_dist > 0.2)
@@ -295,12 +294,14 @@ bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame
 		//cout << "KeyFrames size < 2\n";
 		return false;
 	}
-	FindNeighboringKeyFrames(keyFrames, currData, neighboringKeyFrameIdx);
-	if (neighboringKeyFrameIdx.size() == 0)
+	//FindNeighboringKeyFrames(keyFrames, currData, neighboringKeyFrameIdx);
+	neighboringKeyFrameIdx.push_back(0);
+	neighboringKeyFrameIdx.push_back(1);
+	/*if (neighboringKeyFrameIdx.size() == 0)
 	{
 		cout << "Neighboring keyframe size is zero.\n";
 		return false;
-	}
+	}*/
 	for (std::vector<int>::iterator queryIdx = neighboringKeyFrameIdx.begin(); queryIdx != neighboringKeyFrameIdx.end(); ++queryIdx)
 	{
 		int r3dPtsCount = (int)keyFrames[*queryIdx].r3dPts.size();

@@ -30,11 +30,11 @@ public:
 	cv::Mat descriptors;
 
 	/*	3D map	*/
-	std::vector<int> coresIdx; // index of correspondences in keyframe(3D-2D)
+	std::vector<int> coresIdx; //	correspondence of index in keyframe(3D-2D)
 	std::vector<cv::Point3d> r3dPts;
 
-	/* Matrix */
-	MyMatrix projMatrix;//不一定需要
+	/*	Matrix	*/
+	MyMatrix projMatrix;
 	MyMatrix R;
 	Vector3d t;
 };

@@ -183,7 +183,6 @@ void draw_axes(double size)
 	glTranslated(0.0,0.0,size);
 	glutSolidCone(0.05*size, 0.15*size, 16, 32);
 	glPopMatrix();
-
 	if(isEnableLighting == 1) glEnable(GL_LIGHTING);
 	else glDisable(GL_LIGHTING);
 
@@ -239,8 +238,9 @@ void display(void)
 
 		glMatrixMode(GL_MODELVIEW);
 		glLoadMatrixd(gl_para);
-
 		glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+		draw_axes(300.0);
+		glColor3d(0.0, 0.0, 0.0);
 		char method = EstimationMethod();
 		if (method == 'H')
 		{
@@ -251,8 +251,8 @@ void display(void)
 		else if (method == 'P')
 		{
 			glTranslated(400.0, 300.0, 50.0);
-			glRotated(90.0, 1.0, 0.0, 0.0);
-			glutWireCube(100.0);
+			glRotated(0.0, 1.0, 0.0, 0.0);
+			glutSolidCube(100.0);
 		}
 	}
 	glutSwapBuffers();
