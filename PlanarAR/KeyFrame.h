@@ -24,16 +24,16 @@ public:
 class KeyFrame
 {
 public:
-	/* 2D data	*/
+	// 2D data	
 	cv::Mat image;
 	std::vector<cv::KeyPoint> keypoints;
 	cv::Mat descriptors;
 
-	/*	3D map	*/
+	//	3D map	
 	std::vector<int> coresIdx; //	correspondence of index in keyframe(3D-2D)
 	std::vector<cv::Point3d> r3dPts;
 
-	/*	Matrix	*/
+	//	Matrix
 	MyMatrix projMatrix;
 	MyMatrix R;
 	Vector3d t;
@@ -41,6 +41,7 @@ public:
 
 struct Measurement
 {
+	//	Record
 	double angle;
 	double distance;
 };

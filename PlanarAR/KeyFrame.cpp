@@ -13,9 +13,6 @@ unsigned int keyFrameIdx = 1;
 
 void CreateProjMatrix(MyMatrix &K, const MyMatrix &R, const Vector3d &t, MyMatrix &projMatrix)
 {
-	/*MyMatrix K(3, 3);
-	for (int i = 0; i < 9; ++i)
-		K.m_lpdEntries[i] = cameraPara[i];*/
 	projMatrix.CreateMatrix(3, 4);
 	projMatrix.m_lpdEntries[0] =  R.m_lpdEntries[0];
 	projMatrix.m_lpdEntries[1] =  R.m_lpdEntries[1];
@@ -35,40 +32,25 @@ void CreateProjMatrix(MyMatrix &K, const MyMatrix &R, const Vector3d &t, MyMatri
 
 void CreateKeyFrame(MyMatrix &K, FrameMetaData &currData, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames)
 {
-	KeyFrame keyFrame;
-	currFrameImg.copyTo(keyFrame.image);
-	currData.keypoints.swap(keyFrame.keypoints);
-	currData.descriptors.copyTo(keyFrame.descriptors);
-	keyFrame.R.CreateMatrix(3, 3);
-	keyFrame.R = currData.R;
-	keyFrame.t = currData.t;
-	CreateProjMatrix(K, keyFrame.R, keyFrame.t, keyFrame.projMatrix);
-	keyFrames.push_back(keyFrame);
+	KeyFrame keyframe;
+
+	currFrameImg.copyTo(keyframe.image);
+	currData.keypoints.swap(keyframe.keypoints);
+	currData.descriptors.copyTo(keyframe.descriptors);
+
+	keyframe.R.CreateMatrix(3, 3);
+	keyframe.R = currData.R;
+	keyframe.t = currData.t;
+	CreateProjMatrix(K, keyframe.R, keyframe.t, keyframe.projMatrix);
+
+	keyFrames.push_back(keyframe);
+
 	std::stringstream fileNameStream;
 	std::string fileName;
 	fileNameStream << "KeyFrame" << keyFrameIdx++ << ".jpg";
 	fileName = fileNameStream.str();
-	SavingKeyFrame(fileName, keyFrame.image);
+	SavingKeyFrame(fileName, keyframe.image);
 }
- 
-/*
-double calcDistance(Vector3d &t1, Vector3d &t2, double angle)
-{
-	double t1Length = sqrt(t1.x*t1.x + t1.y*t1.y + t1.z*t1.z);
-	double t2Length = sqrt(t2.x*t2.x + t2.y*t2.y + t2.z*t2.z);
-	if (t1Length == 0.0f || t2Length == 0.0f)
-		return 0.0f;
-
-	double Cosine = (t1.x*t2.x + t1.y*t2.y + t1.z*t2.z) / (t1Length*t2Length);
-	double theta = acos(Cosine) * 180 / PI;
-	//angle = theta;
-	if (theta > 90)
-		return 0.00;
-	//cout << theta << endl;
-	double distance = sqrt(t1Length*t1Length + t2Length*t2Length - 2 * t1Length*t2Length*Cosine);
-	return distance;
-}
-*/
 
 double calcDistance(Vector3d &t1, Vector3d &t2)
 {
@@ -86,6 +68,8 @@ double calcAngle(MyMatrix &K, MyMatrix &R1, MyMatrix &R2)
 	KR2 = K*R2;
 	double det1 = KR1.Determine();
 	double det2 = KR2.Determine();
+	if (det1 == 0.0f || det2 == 0.0f)
+		return 0.0f;
 
 	R1Col2.x = det1*R1.m_lpdEntries[2];
 	R1Col2.y = det1*R1.m_lpdEntries[5];
@@ -105,13 +89,15 @@ double calcAngle(MyMatrix &K, MyMatrix &R1, MyMatrix &R2)
 
 bool KeyFrameSelection(MyMatrix &K, KeyFrame &keyFramesBack, FrameMetaData &currData, vector <Measurement> &measurementData)
 {
-	if (currData.state == 'I')
-		return false;
 	double distance = calcDistance(keyFramesBack.t, currData.t);
-	if (distance < 300.0f || isnan(distance))
+	if (distance < 250.0f || isnan(distance))
+	{
+		cout << "Distance : " << distance << endl;
 		return false;
+	}
+
 	double angle = calcAngle(K, keyFramesBack.R, currData.R);
-	if (angle < 15.0f || isnan(angle))
+	if (angle < 10.0f || isnan(angle))
 		return false;
 
 	Measurement measurement;
@@ -127,8 +113,7 @@ void WorldToCamera(MyMatrix &R, Vector3d &t, cv::Point3d &r3dPt, Vector3d &r3dVe
 {
 	//From world coordinate to camera coordinate
 
-	MyMatrix pt(3, 1); 
-	//重新看一次，老師給的書
+	MyMatrix pt(3, 1);
 	//Rotation R
 	pt.m_lpdEntries[0] = r3dPt.x;
 	pt.m_lpdEntries[1] = r3dPt.y;
@@ -165,16 +150,17 @@ bool isNegihboringKeyFrame(Vector3d &t1, Vector3d &t2, Vector3d &r3dVec1, Vector
 	
 	if (theta1 > 90.0 || theta2 > 90.0)
 		return false;
+
 	if (abs(theta1 - theta2) >= 30.0)
 		return false;
+
 	return true;
 }
 
 void FindNeighboringKeyFrames(std::vector<KeyFrame> &keyFrames, FrameMetaData &currData, std::vector<int> &neighboringKeyFrameIdx)
 {
 	/*	Use the last keyframe for finding the neighboring keyframes	*/
-	//感覺怪怪der
-	//先改成全部比對
+	//目前全部比對
 	int keyFramesSize = (int)keyFrames.size() - 1;
 	cv::Point2f originPt(400.0f, 300.0f);
 	int index = 0;

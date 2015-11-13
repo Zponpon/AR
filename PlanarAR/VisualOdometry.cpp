@@ -12,7 +12,6 @@ static vector<FrameMetaData> frameMetaDatas;
 static vector<KeyFrame> keyFrames;
 static std::thread Optimization;
 static vector <Measurement> measurementData;
-static int index = 1;
 static MyMatrix K(3, 3); // Camera Matrix
 
 void SetCameraMatrix(double *cameraPara)
@@ -57,7 +56,6 @@ char EstimationMethod()
 void RemoveRedundancyIdx()
 {
 	/*	刪除重複的對應點	*/
-	//After Triangulation
 	for (vector<KeyFrame>::iterator KF = keyFrames.begin(); KF != keyFrames.end(); ++KF)
 	{
 		std::map<int, cv::Point3d> indexMap;
@@ -66,7 +64,9 @@ void RemoveRedundancyIdx()
 		
 		while (i & j)
 		{
-			indexMap.insert(std::pair<int, cv::Point3d>(KF->coresIdx[i--], KF->r3dPts[j--]));
+			indexMap.insert(std::pair<int, cv::Point3d>(KF->coresIdx[(std::vector<int>::size_type)i], KF->r3dPts[(std::vector<int>::size_type)j]));
+			i--;
+			j--;
 		}
 		KF->coresIdx.clear();
 		KF->r3dPts.clear();
@@ -78,6 +78,7 @@ void RemoveRedundancyIdx()
 		}
 	}
 }
+
 /*
 void KeyFrameTesting()
 {
@@ -97,11 +98,12 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 		SetCameraMatrix(cameraPara);
 	if (Optimization.joinable())
 	{
-		Optimization.join();//等待multithread的部分做完
+		//	Multithread
+		Optimization.join(); //	wait another thread completes
 		RemoveRedundancyIdx();
 	}
 	
-	FrameMetaData currData;
+	FrameMetaData currData; //	Record the current frame data
 	if (!FeatureDetection(3000, currData, currFrameMat)) return false;
 
 	vector<cv::Point2f> currFrameGoodMatches, featureMapGoodMatches;
@@ -114,7 +116,9 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 		if (keyFrames.size() == 0)
 		{
 			CreateKeyFrame(K, currData, currFrameMat, keyFrames);
-			currData.state = 'I';
+			currData.state = 'H';
+			frameMetaDatas.push_back(currData);
+			return true;
 		}
 	}
 	else if (FeatureMatching(cameraPara, keyFrames, currData, currFrameMat, neighboringKeyFrameIdx, goodMatchesSet))
@@ -124,18 +128,17 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 			return false;
 	}
 	else return false;
+
 	if (KeyFrameSelection(K, keyFrames.back(), currData, measurementData))
 	{
-		if (keyFrames.size() < 2)
+		if (keyFrames.size() < 3)
 		{
 			CreateKeyFrame(K, currData, currFrameMat, keyFrames);
 			Triangulation(cameraPara, keyFrames);
-			//move-assign thread
 			//Optimization = std::thread(Triangulation, cameraPara, ref(keyFrames));
 		}
 	}
-	if (currData.state == 'I')
-		currData.state = 'H';
+
 	frameMetaDatas.push_back(currData);
 
 	return true;

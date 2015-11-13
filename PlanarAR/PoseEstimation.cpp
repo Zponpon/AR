@@ -511,31 +511,32 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], Featur
 {
 	//Using homography to estimate camera pose
 	cout << "Starting PoseEstimation by homography\n";
-	cv::Mat mask;	//Record the inliers 
-	cv::Mat Homo(cv::findHomography(featureMapGoodMatches, currFrameGoodMatches, CV_RANSAC, 3.0, mask));
+
+	cv::Mat inliers;	//Record the inliers
+	cv::Mat Homo(cv::findHomography(featureMapGoodMatches, currFrameGoodMatches, CV_RANSAC, 3.0, inliers));
 	MyMatrix H(3, 3);
 	for (int i = 0; i < 9; ++i)
 		H.m_lpdEntries[i] = Homo.at<double>(i);
 	
 	std::vector<cv::Point2f> featureMapInliers, frameInliers;
-	for (int i = 0; i < mask.rows; ++i)
+	for (int i = 0; i < inliers.rows; ++i)
 	{
-		if (mask.at<uchar>(i))
+		if (inliers.at<uchar>(i))
 		{
-			featureMapInliers.push_back(featureMapGoodMatches[i]);
-			frameInliers.push_back(currFrameGoodMatches[i]);
+			std::vector<cv::Point2f>::size_type index = (std::vector<cv::Point2f>::size_type) i;
+			featureMapInliers.push_back(featureMapGoodMatches[index]);
+			frameInliers.push_back(currFrameGoodMatches[index]);
 		}
 	}
 
 	MyMatrix R(3, 3);
 	Vector3d t;
 	EstimateCameraPoseFromHomography(H, cameraPara[0], cameraPara[4], cameraPara[1], cameraPara[2], cameraPara[5], R, t);
-	RefineCameraPose(featureMapInliers, frameInliers, frameInliers.size(), cameraPara[0], cameraPara[4], cameraPara[1], cameraPara[2], cameraPara[5], R, t);
+	RefineCameraPose(featureMapInliers, frameInliers, (int)frameInliers.size(), cameraPara[0], cameraPara[4], cameraPara[1], cameraPara[2], cameraPara[5], R, t);
 
 	trans[0][0] = R.m_lpdEntries[0];
 	trans[0][1] = R.m_lpdEntries[1];
 	trans[0][2] = R.m_lpdEntries[2];
-
 	trans[0][3] = t.x;
 	trans[1][0] = R.m_lpdEntries[3];
 	trans[1][1] = R.m_lpdEntries[4];
@@ -550,52 +551,57 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], Featur
 	currData.timeStamp = clock() / CLOCKS_PER_SEC;
 	currData.state = 'H';
 
-	//	把影像中好的特徵點放入prevFeatureMapinliers ，給OpticalFlow計算用
-	//	把場景中好的特徵點放入prevFrameinliers，給OpticalFlow計算用
+	//	OpticalFlow
 	prevFeatureMapInliers.swap(featureMapInliers);
 	prevFrameInliers.swap(frameInliers);
+
 	cout << "PoseEstimation by homography is successful.\n";
 }
 
 void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::vector<KeyFrame> &keyFrames, FrameMetaData &currData, std::vector<int> &neighboringKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
 {
 	cout << "PoseEstimation by PnP Start.\n";
+
 	std::vector<cv::Point3d> matching3DPts;
 	std::vector<cv::Point2f> matching2DPts;
 	for (std::vector< std::vector<cv::DMatch> >::size_type i = 0; i < goodMatchesSet.size(); ++i)
 	{
-		std::size_t index = (std::size_t)i;
+		std::vector<int>::size_type index = (std::vector<int>::size_type) i;
 		for (std::vector<cv::DMatch>::size_type j = 0; j < goodMatchesSet[i].size(); ++j)
 		{
 			matching2DPts.push_back(currData.keypoints[goodMatchesSet[i][j].queryIdx].pt);
 			matching3DPts.push_back(keyFrames[neighboringKeyFrameIdx[index]].r3dPts[goodMatchesSet[i][j].trainIdx]);
 		}
 	}
-	int matchingCount = (int)matching3DPts.size();
-	if (matchingCount < 4)
+
+	if ((int)matching3DPts.size() < 4)
 	{
 		/*cout << "SolvePnP size < 4\n";
 		cout << "SolvePnP Size : " << matchingCount << endl;*/
 		currData.state = 'F';
 		return;
 	}
+
 	cv::Mat K(3, 3, CV_64F), distCoeffs;
 	for (int i = 0; i < 9; ++i)
 		K.at<double>(i) = cameraPara[i];
-	cv::Mat rVec, t, inliers;
+	cv::Mat rVec, t;
+	std::vector<uchar> inliers;
+
 	cv::solvePnPRansac(matching3DPts, matching2DPts, K, distCoeffs, rVec, t, false, 100, 8.0, 100, inliers);
-	if (inliers.rows < 4)
+
+	if ((int)inliers.size() < 4)
 	{
 		cout << "SolveRansacPnP's inliers size < 4\n";
 		currData.state = 'F';
 		return;
 	}
+
 	//Rotation vector to rotation matrix
 	cv::Mat R;
 	cv::Rodrigues(rVec, R);
 
 	//Initialize the current FrameMetaData
-	//回LAB試試看把at改成ptr
 	currData.R.CreateMatrix(3, 3);
 	for (int i = 0; i < 9; ++i)
 		currData.R.m_lpdEntries[i] = R.at<double>(i);
