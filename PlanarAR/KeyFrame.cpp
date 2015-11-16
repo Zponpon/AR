@@ -10,7 +10,6 @@ using std::endl;
 
 unsigned int keyFrameIdx = 1;
 
-
 void CreateProjMatrix(MyMatrix &K, const MyMatrix &R, const Vector3d &t, MyMatrix &projMatrix)
 {
 	projMatrix.CreateMatrix(3, 4);
@@ -44,12 +43,12 @@ void CreateKeyFrame(MyMatrix &K, FrameMetaData &currData, cv::Mat &currFrameImg,
 	CreateProjMatrix(K, keyframe.R, keyframe.t, keyframe.projMatrix);
 
 	keyFrames.push_back(keyframe);
-
 	std::stringstream fileNameStream;
 	std::string fileName;
 	fileNameStream << "KeyFrame" << keyFrameIdx++ << ".jpg";
 	fileName = fileNameStream.str();
 	SavingKeyFrame(fileName, keyframe.image);
+	
 }
 
 double calcDistance(Vector3d &t1, Vector3d &t2)
@@ -62,27 +61,20 @@ double calcAngle(MyMatrix &K, MyMatrix &R1, MyMatrix &R2)
 	//相機方向
 	Vector3d R1Col2, R2Col2;
 
-	MyMatrix KR1(3, 3), KR2(3, 3);
-
-	KR1 = K*R1;
-	KR2 = K*R2;
-	double det1 = KR1.Determine();
-	double det2 = KR2.Determine();
-	if (det1 == 0.0f || det2 == 0.0f)
-		return 0.0f;
-
-	R1Col2.x = det1*R1.m_lpdEntries[2];
-	R1Col2.y = det1*R1.m_lpdEntries[5];
-	R1Col2.z = det1*R1.m_lpdEntries[8];
-	R2Col2.x = det2*R2.m_lpdEntries[2];
-	R2Col2.y = det2*R2.m_lpdEntries[5];
-	R2Col2.z = det2*R2.m_lpdEntries[8];
+	//R3反方向
+	//不需要乘上K
+	//因為我們是以
+	R1Col2.x = R1.m_lpdEntries[2]*(-1);
+	R1Col2.y = R1.m_lpdEntries[5]*(-1);
+	R1Col2.z = R1.m_lpdEntries[8]*(-1);
+	R2Col2.x = R2.m_lpdEntries[2]*(-1);
+	R2Col2.y = R2.m_lpdEntries[5]*(-1);
+	R2Col2.z = R2.m_lpdEntries[8]*(-1);
 
 	double R1Length = sqrt(R1Col2.x*R1Col2.x + R1Col2.y*R1Col2.y + R1Col2.z*R1Col2.z);
 	double R2Length = sqrt(R2Col2.x*R2Col2.x + R2Col2.y*R2Col2.y + R2Col2.z*R2Col2.z);
 	double Cosine = (R1Col2.x*R2Col2.x + R1Col2.y*R2Col2.y + R1Col2.z*R2Col2.z)/(R1Length*R2Length);
 	double angle = acos(Cosine) * 180 / PI;
-	cout << "Angle :" << " " << angle << endl;
 
 	return angle;
 }
@@ -90,25 +82,30 @@ double calcAngle(MyMatrix &K, MyMatrix &R1, MyMatrix &R2)
 bool KeyFrameSelection(MyMatrix &K, KeyFrame &keyFramesBack, FrameMetaData &currData, vector <Measurement> &measurementData)
 {
 	double distance = calcDistance(keyFramesBack.t, currData.t);
-	if (distance < 250.0f || isnan(distance))
+	if (distance <= 250.0f || isnan(distance))
 	{
 		cout << "Distance : " << distance << endl;
 		return false;
 	}
 
 	double angle = calcAngle(K, keyFramesBack.R, currData.R);
-	if (angle < 10.0f || isnan(angle))
+	if (angle <= 30.0f || isnan(angle))
+	{
+		cout << "Angle : " << angle << endl;
 		return false;
+	}
 
 	Measurement measurement;
 	measurement.distance = distance;
 	measurement.angle = angle;
 	measurementData.push_back(measurement);
+
 	return true;
 }
 
 
 /*	Finding neighboring keyframe	*/
+
 void WorldToCamera(MyMatrix &R, Vector3d &t, cv::Point3d &r3dPt, Vector3d &r3dVec)
 {
 	//From world coordinate to camera coordinate
@@ -135,8 +132,7 @@ bool isNegihboringKeyFrame(Vector3d &t1, Vector3d &t2, Vector3d &r3dVec1, Vector
 {
 	//用兩張frame的原點算出原點的3D點座標
 	//計算t跟原點跟3D點座標的向量之夾角
-	
-	//cout << "3D point : " << r3dPtVec.x << ", " << r3dPtVec.y << ", " << r3dPtVec.z << endl;
+
 	double r3dVec1Length = sqrt(r3dVec1.x*r3dVec1.x + r3dVec1.y*r3dVec1.y + r3dVec1.z*r3dVec1.z);
 	double t1Length = sqrt(t1.x*t1.x + t1.y*t1.y + t1.z*t1.z);
 	double Cosine1 = (t1.x*r3dVec1.x + t1.y*r3dVec1.y + t1.z*r3dVec1.z) / (r3dVec1Length*t1Length);

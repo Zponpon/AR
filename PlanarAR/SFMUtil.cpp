@@ -12,7 +12,7 @@
 #include "MathLib\MathLib.h"
 #include "levmar.h"
 
-static vector<SFM_Feature> SFM_Features;
+
 
 /***************************************************************************************************************/
 /*  Calculate 3D coordinates of points using known correspondence and projection matrices
@@ -467,7 +467,7 @@ double EstimateFocalLength(MyMatrix &F, double u0, double v0, double u1, double 
 	return sqrt(-f1.m_lpdEntries[0] / f2.m_lpdEntries[0]);
 }
 
-void UpdateSFM_Features(KeyFrame &query, int imgIdx1, KeyFrame &train, int imgIdx2, std::vector<cv::DMatch> &goodMatches)
+void UpdateSFM_Features(std::vector<SFM_Feature> &SFM_Features, KeyFrame &query, int imgIdx1, KeyFrame &train, int imgIdx2, std::vector<cv::DMatch> &goodMatches)
 {
 	int pos1 = -1, pos2 = -1;
 
@@ -501,7 +501,7 @@ void UpdateSFM_Features(KeyFrame &query, int imgIdx1, KeyFrame &train, int imgId
 				feature.isValid = true;
 				feature.pt.x = key1.pt.x;
 				feature.pt.y = key1.pt.y;
-				feature.ptIdx = goodMatches[i].queryIdx;
+				//feature.ptIdx = goodMatches[i].queryIdx;
 				feature.descriptorIdx = goodMatches[i].queryIdx;
 
 				SFM_Features.push_back(feature);
@@ -528,7 +528,7 @@ void UpdateSFM_Features(KeyFrame &query, int imgIdx1, KeyFrame &train, int imgId
 				feature.isValid = true;
 				feature.pt.x = key2.pt.x;
 				feature.pt.y = key2.pt.y;
-				feature.ptIdx = goodMatches[i].trainIdx;
+				//feature.ptIdx = goodMatches[i].trainIdx;
 				feature.descriptorIdx = goodMatches[i].trainIdx;
 
 				SFM_Features.push_back(feature);
@@ -556,7 +556,7 @@ void UpdateSFM_Features(KeyFrame &query, int imgIdx1, KeyFrame &train, int imgId
 				feature.isValid = true;
 				feature.pt.x = key1.pt.x;
 				feature.pt.y = key1.pt.y;
-				feature.ptIdx = goodMatches[i].queryIdx;
+				//feature.ptIdx = goodMatches[i].queryIdx;
 				feature.descriptorIdx = goodMatches[i].queryIdx;
 				SFM_Features.push_back(feature);
 
@@ -564,7 +564,7 @@ void UpdateSFM_Features(KeyFrame &query, int imgIdx1, KeyFrame &train, int imgId
 				feature.isValid = true;
 				feature.pt.x = key2.pt.x;
 				feature.pt.y = key2.pt.y;
-				feature.ptIdx = goodMatches[i].trainIdx;
+				//feature.ptIdx = goodMatches[i].trainIdx;
 				feature.descriptorIdx = goodMatches[i].trainIdx;
 				SFM_Features.push_back(feature);
 
@@ -578,7 +578,7 @@ void UpdateSFM_Features(KeyFrame &query, int imgIdx1, KeyFrame &train, int imgId
 	}
 }
 
-void RemoveOutlier(KeyFrame &query, KeyFrame &train, std::vector<cv::DMatch> &goodMatches)
+void RemoveOutlier(vector<SFM_Feature> &SFM_Features, KeyFrame &query, KeyFrame &train, std::vector<cv::DMatch> &goodMatches)
 {
 	cout << "Starting remove outlier(keyframes)\n";
 
@@ -608,7 +608,7 @@ void RemoveOutlier(KeyFrame &query, KeyFrame &train, std::vector<cv::DMatch> &go
 	cout << "Remove outlier end.\n";
 }
 
-void EstablishImageCorrespondences(std::vector<KeyFrame> &keyFrames)
+void EstablishImageCorrespondences(vector<SFM_Feature> &SFM_Features, std::vector<KeyFrame> &keyFrames)
 {
 	int imgIdx1 = 0, imgIdx2 = 1;
 	for (std::vector<KeyFrame>::size_type i = 0; i < keyFrames.size(); ++i)
@@ -621,8 +621,8 @@ void EstablishImageCorrespondences(std::vector<KeyFrame> &keyFrames)
 				imgIdx2++;
 			else
 			{
-				RemoveOutlier(keyFrames[i], keyFrames[j], goodMatches);
-				UpdateSFM_Features(keyFrames[i], imgIdx1, keyFrames[j], imgIdx2++, goodMatches);
+				RemoveOutlier(SFM_Features, keyFrames[i], keyFrames[j], goodMatches);
+				UpdateSFM_Features(SFM_Features, keyFrames[i], imgIdx1, keyFrames[j], imgIdx2++, goodMatches);
 			}
 		}
 		imgIdx1++;
@@ -630,7 +630,7 @@ void EstablishImageCorrespondences(std::vector<KeyFrame> &keyFrames)
 	}
 }
 
-void RemoveRedundantCorrespondences(const vector<KeyFrame> &keyFrames)	//OpenCV 
+void RemoveRedundantCorrespondences(vector<SFM_Feature> &SFM_Features, const vector<KeyFrame> &keyFrames)	//OpenCV 
 {
 	for (vector<SFM_Feature>::size_type i = 0; i < SFM_Features.size(); ++i)
 	{
@@ -744,20 +744,17 @@ void BundleAdjustment(std::vector<KeyFrame> &keyFrames)
 	//We do global or local optimization at here
 }
 
-void Triangulation(double *cameraPara, std::vector<KeyFrame> &keyFrames)
+void Triangulation(double *cameraPara, vector<SFM_Feature> &SFM_Features, std::vector<KeyFrame> &keyFrames, std::vector<cv::Point3d> &r3dPts)
 {
 	//This process is done by another thread
 	
 	if ((int)keyFrames.size() < 2) 
 		return;
 
-
 	cout << "Starting triangulation.\n";
 
-	vector<cv::Point3d> r3dPts;
-	EstablishImageCorrespondences(keyFrames);
+	EstablishImageCorrespondences(SFM_Features, keyFrames);
 
-	//Reconstruction process of 3d points
 	for (vector<SFM_Feature>::iterator feature = SFM_Features.begin(); feature != SFM_Features.end(); ++feature)
 	{
 		if (feature->isValid && !feature->find3d)
@@ -765,15 +762,12 @@ void Triangulation(double *cameraPara, std::vector<KeyFrame> &keyFrames)
 			vector<cv::Point2f> pts(1, feature->pt);
 			vector<MyMatrix> PMs(1, keyFrames[(std::vector<KeyFrame>::size_type)feature->imgIdx].projMatrix);
 
-			/*	first -> Image index, second -> SFM_Feature cores index	*/
-			std::map<int, int> coresMap;
 			for (std::vector<int>::size_type i = 0; i < feature->cores.size(); ++i)
 			{
 				if (SFM_Features[feature->cores[i]].isValid && !SFM_Features[feature->cores[i]].find3d)
 				{
 					pts.push_back(SFM_Features[feature->cores[i]].pt);
 					PMs.push_back(keyFrames[SFM_Features[feature->cores[i]].imgIdx].projMatrix);
-					coresMap.insert(std::pair<int, int>(SFM_Features[feature->cores[i]].imgIdx, (int)i));
 				}
 			}
 
@@ -782,29 +776,23 @@ void Triangulation(double *cameraPara, std::vector<KeyFrame> &keyFrames)
 			{
 				if (r3dPt.z <= 20.0f && r3dPt.z >= -20.0f)
 				{
-					keyFrames[feature->imgIdx].coresIdx.push_back(feature->ptIdx);
-					keyFrames[feature->imgIdx].r3dPts.push_back(r3dPt);
+					feature->ptIdx = (int)r3dPts.size();
+					r3dPts.push_back(r3dPt);
+					keyFrames[feature->imgIdx].ptIdx.push_back(feature->ptIdx);
 					feature->find3d = true;
 
-					for (std::map<int, int>::iterator cores = coresMap.begin(); cores != coresMap.end(); ++cores)
+					for (std::vector<int>::size_type i = 0; i < feature->cores.size(); ++i)
 					{
-						keyFrames[(std::vector<int>::size_type)cores->first].r3dPts.push_back(r3dPt);
-						keyFrames[(std::vector<int>::size_type)cores->first].coresIdx.push_back(SFM_Features[feature->cores[(std::vector<int>::size_type)cores->second]].ptIdx);
-						SFM_Features[feature->cores[(std::vector<int>::size_type)cores->second]].find3d = true;
+						//儲存對應到的3D點index
+						SFM_Features[feature->cores[i]].ptIdx = feature->ptIdx;
+						keyFrames[SFM_Features[feature->cores[i]].imgIdx].ptIdx.push_back(feature->ptIdx);
+						SFM_Features[feature->cores[i]].find3d = true;
 					}
 				}
-				/*else
-				{
-					feature->find3d = false;
-					for (std::map<int, int>::iterator cores = coresMap.begin(); cores != coresMap.end(); ++cores)
-					{
-						SFM_Features[feature->cores[(std::vector<int>::size_type)cores->second]].find3d = false;
-					}
-				}*/
 			}
 		}
 	}
-	RemoveRedundantCorrespondences(keyFrames);
+	RemoveRedundantCorrespondences(SFM_Features, keyFrames);
 	//BundleAdjustment();
 
 	cout << "Triangulation is end.\n";

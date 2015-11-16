@@ -282,22 +282,29 @@ void FindGoodMatches(std::vector<cv::DMatch> &matches, std::vector<cv::DMatch> &
 }
 
 /*	Ransac PnP	*/
-bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, FrameMetaData &currData, cv::Mat &currFrameImg, std::vector<int> &neighboringKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
+bool FeatureMatching(double *cameraPara, std::vector<SFM_Feature> &SFM_Features, std::vector<KeyFrame> &keyFrames, FrameMetaData &currData, cv::Mat &currFrameImg, std::vector<int> &neighboringKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
 {
 	/* When we move the camera to the place where are without the featureMap                  */
 	/* We use the last keyframe to find the neighboring keyframes in the keyframe set         */
 	/* Use these 3d points constructed by keyframes we found to estimate our camera pose(PnP) */
 
 	if (keyFrames.size() < 2)
+	{
+		if (neighboringKeyFrameIdx.size() != 0 && (int)keyFrames.size() > 0)
+		{
+			if ((int)(keyFrames.size() - 1) != neighboringKeyFrameIdx.back())
+				neighboringKeyFrameIdx.push_back((int)(keyFrames.size() - 1));
+		}
 		return false;
+	}
 
 	cout << "Start matching scene with keyframes.\n";
 
 	//FindNeighboringKeyFrames(keyFrames, currData, neighboringKeyFrameIdx);
-	neighboringKeyFrameIdx.push_back(0);
-	neighboringKeyFrameIdx.push_back(1);
-	neighboringKeyFrameIdx.push_back(2);
-	//neighboringKeyFrameIdx.push_back(3);
+	if (keyFrames.size() <= 4 && neighboringKeyFrameIdx.back() != (int)keyFrames.size() - 1)
+	{
+		neighboringKeyFrameIdx.push_back((int)keyFrames.size() - 1);
+	}
 	/*if (neighboringKeyFrameIdx.size() == 0)
 	{
 		cout << "Neighboring keyframe size is zero.\n";
@@ -306,21 +313,26 @@ bool FeatureMatching(double *cameraPara, std::vector<KeyFrame> &keyFrames, Frame
 
 	for (std::vector<int>::iterator queryIdx = neighboringKeyFrameIdx.begin(); queryIdx != neighboringKeyFrameIdx.end(); ++queryIdx)
 	{
-		//cout <<"3d size: "<< (int)keyFrames[*queryIdx].r3dPts.size() << endl;
-		int r3dPtsCount = (int)keyFrames[(vector<KeyFrame>::size_type)*queryIdx].r3dPts.size();
-		if (r3dPtsCount > 0)
-		{
-			//	Initialize the descriptors
-			cv::Mat descriptors(r3dPtsCount, currData.descriptors.cols, currData.descriptors.type());
-			for (int j = 0; j < r3dPtsCount; ++j)
-				keyFrames[(vector<KeyFrame>::size_type)*queryIdx].descriptors.row(keyFrames[(vector<KeyFrame>::size_type)*queryIdx].coresIdx[(vector<int>::size_type)j]).copyTo(descriptors.row(j));
+		int r3dPtsCount = (int)keyFrames[(vector<KeyFrame>::size_type)*queryIdx].ptIdx.size();
+		if (r3dPtsCount == 0)
+			continue;
 
-			std::vector<cv::DMatch> matches, goodMatches;
-			FlannMatching(currData.descriptors, descriptors, matches);
-			FindGoodMatches(matches, goodMatches);
-			goodMatchesSet.push_back(goodMatches);
+		int index = 0;
+		cv::Mat descriptors(r3dPtsCount, currData.descriptors.cols, currData.descriptors.type());
+		for (std::vector<SFM_Feature>::iterator feature = SFM_Features.begin(); feature != SFM_Features.end(); ++feature)
+		{
+			if (feature->imgIdx == *queryIdx)
+			{
+				keyFrames[*queryIdx].descriptors.row(feature->descriptorIdx).copyTo(descriptors.row(index));
+			}
 		}
+
+		std::vector<cv::DMatch> matches, goodMatches;
+		FlannMatching(currData.descriptors, descriptors, matches);
+		FindGoodMatches(matches, goodMatches);
+		goodMatchesSet.push_back(goodMatches);
 	}
+
 	if (goodMatchesSet.size() == 0)	
 		return false;
 

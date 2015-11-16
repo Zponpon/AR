@@ -13,6 +13,11 @@ static vector<KeyFrame> keyFrames;
 static std::thread Optimization;
 static vector <Measurement> measurementData;
 static MyMatrix K(3, 3); // Camera Matrix
+vector<int> neighboringKeyFrameIdx;
+vector<cv::Point3d> r3dPts;	//world coordinate 3d points
+
+static vector<SFM_Feature> SFM_Features;
+
 
 void SetCameraMatrix(double *cameraPara)
 {
@@ -42,8 +47,8 @@ void CreateFeatureMaps(FeatureMap &featureMap, unsigned int minHessian)
 
 void StopMultiThread()
 {
-	using std::chrono::system_clock;
-	std::this_thread::sleep_until(system_clock::now());
+	//using std::chrono::system_clock;
+	//std::this_thread::sleep_until(system_clock::now());
 	WriteMeasurementDataFile(measurementData);
 }
 
@@ -53,61 +58,23 @@ char EstimationMethod()
 	return frameMetaDatas.back().state;
 }
 
-void RemoveRedundancyIdx()
-{
-	/*	刪除重複的對應點	*/
-	for (vector<KeyFrame>::iterator KF = keyFrames.begin(); KF != keyFrames.end(); ++KF)
-	{
-		std::map<int, cv::Point3d> indexMap;
-		int i = (int)KF->coresIdx.size() - 1;
-		int j = (int)KF->r3dPts.size() - 1;
-		
-		while (i & j)
-		{
-			indexMap.insert(std::pair<int, cv::Point3d>(KF->coresIdx[(std::vector<int>::size_type)i], KF->r3dPts[(std::vector<int>::size_type)j]));
-			i--;
-			j--;
-		}
-		KF->coresIdx.clear();
-		KF->r3dPts.clear();
-
-		for (std::map<int, cv::Point3d>::iterator index = indexMap.begin(); index != indexMap.end(); ++index)
-		{
-			KF->coresIdx.push_back(index->first);
-			KF->r3dPts.push_back(index->second);
-		}
-	}
-}
-
-/*
-void KeyFrameTesting()
-{
-	keyFrames.resize(5);
-	keyFrames[0].image = cv::imread("KeyFrames/KeyFrames1.jpg");
-	keyFrames[1].image = cv::imread("KeyFrames/KeyFrames2.jpg");
-	keyFrames[2].image = cv::imread("KeyFrames/KeyFrames3.jpg");
-	keyFrames[3].image = cv::imread("KeyFrames/KeyFrames4.jpg");
-	keyFrames[5].image = cv::imread("KeyFrames/KeyFrames5.jpg");
-
-}
-*/
-
 bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat &prevFrameMat, cv::Mat &currFrameMat)
 {	
 	if (keyFrames.size() == 0)
 		SetCameraMatrix(cameraPara);
+	/*
 	if (Optimization.joinable())
 	{
 		//	Multithread
-		Optimization.join(); //	wait another thread completes
-		RemoveRedundancyIdx();
+		Optimization.join(); //	wait for another thread completes
+		RemoveRedundancyCoresIdx();
 	}
-	
+	*/
 	FrameMetaData currData; //	Record the current frame data
 	if (!FeatureDetection(3000, currData, currFrameMat)) return false;
 
 	vector<cv::Point2f> currFrameGoodMatches, featureMapGoodMatches;
-	vector<int> neighboringKeyFrameIdx;
+	//vector<int> neighboringKeyFrameIdx;
 	vector< vector<cv::DMatch> > goodMatchesSet;
 
 	if (FeatureMatching(featureMap, currData, currFrameMat, prevFrameMat, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
@@ -116,14 +83,15 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 		if (keyFrames.size() == 0)
 		{
 			CreateKeyFrame(K, currData, currFrameMat, keyFrames);
+			neighboringKeyFrameIdx.push_back(0);
 			currData.state = 'H';
 			frameMetaDatas.push_back(currData);
 			return true;
 		}
 	}
-	else if (FeatureMatching(cameraPara, keyFrames, currData, currFrameMat, neighboringKeyFrameIdx, goodMatchesSet))
+	else if (FeatureMatching(cameraPara, SFM_Features, keyFrames, currData, currFrameMat, neighboringKeyFrameIdx, goodMatchesSet))
 	{
-		EstimateCameraTransformation(cameraPara, trans, keyFrames, currData, neighboringKeyFrameIdx, goodMatchesSet);
+		EstimateCameraTransformation(cameraPara, trans, r3dPts, keyFrames, currData, neighboringKeyFrameIdx, goodMatchesSet);
 		if (currData.state == 'F')
 			return false;
 	}
@@ -131,11 +99,12 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 
 	if (KeyFrameSelection(K, keyFrames.back(), currData, measurementData))
 	{
-		if (keyFrames.size() < 3)
+		if (keyFrames.size() < 4)
 		{
+		//	neighboringKeyFrameIdx.push_back((int)keyFrames.size());
 			CreateKeyFrame(K, currData, currFrameMat, keyFrames);
-			Triangulation(cameraPara, keyFrames);
-			//Optimization = std::thread(Triangulation, cameraPara, ref(keyFrames));
+			Triangulation(cameraPara, SFM_Features, keyFrames, r3dPts);
+			//Optimization = std::thread(Triangulation, cameraPara, ref(SFM_Features), ref(keyFrames), ref(r3dpts));
 		}
 	}
 

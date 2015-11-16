@@ -7,7 +7,6 @@
 #include "Matrix\MyMatrix.h"
 #include "Homography\Homography.h"
 #include "PoseEstimation.h"
-#include "SFMUtil.h"
 #include "FeatureProcess.h"
 #include "levmar.h"
 #include "debugfunc.h"
@@ -396,7 +395,7 @@ void RefineCameraPose(Point2d *pPoints1, Point2d *pPoints2, int nPoints, double 
 	//printf("%f %f %f\n",t.x,t.y,t.z);
 }
 
-void RefineCameraPose(std::vector<cv::Point2f> pPoints1, std::vector<cv::Point2f> pPoints2, int nPoints, double fx, double fy, double s, double ux, double uy, MyMatrix &R, Vector3d &t)
+void RefineCameraPose(std::vector<cv::Point2f> &pPoints1, std::vector<cv::Point2f> &pPoints2, int nPoints, double fx, double fy, double s, double ux, double uy, MyMatrix &R, Vector3d &t)
 {
 	double par[7]; // initial parameters par[0]: rotation angle, par[1]-par[3]:rotation axis par[4]-par[6]: translation vector
 	double *pdMeasurements; // Measurements data
@@ -439,6 +438,71 @@ void RefineCameraPose(std::vector<cv::Point2f> pPoints1, std::vector<cv::Point2f
 
 	double info[LM_INFO_SZ];
 	int ret = dlevmar_dif(CostFunctionForCameraRefinement, par, pdMeasurements, 7, 2 * nPoints, 1000, NULL, info, NULL, NULL, pdAddData);  // no Jacobian
+	//printf("Initial Cost=%f Final Cost=%f\n",info[0],info[1]);
+	//printf("# Iter= %d\n",ret);
+
+	delete[] pdMeasurements;
+	delete[] pdAddData;
+
+	RotationMatrix(par[0], par + 1, R);
+	t.x = par[4]; t.y = par[5]; t.z = par[6];
+
+	//DebugShowCostForCameraPoseRefinement(pPoints1, pPoints2, nPoints, fx, fy, s, ux, uy, R, t);
+
+	//printf("Final Rotation Matrix\n");
+	//printf("%f %f %f\n",R.m_lpdEntries[0],R.m_lpdEntries[1],R.m_lpdEntries[2]);
+	//printf("%f %f %f\n",R.m_lpdEntries[3],R.m_lpdEntries[4],R.m_lpdEntries[5]);
+	//printf("%f %f %f\n",R.m_lpdEntries[6],R.m_lpdEntries[7],R.m_lpdEntries[8]);
+	//printf("Final Translation\n");
+	//printf("%f %f %f\n",t.x,t.y,t.z);
+}
+
+void RefineCameraPose(std::vector<cv::Point3d> &pPoints1, std::vector<cv::Point2f> &pPoints2, int nPoints, double fx, double fy, double s, double ux, double uy, MyMatrix &R, Vector3d &t)
+{
+	//CostFunction需要修改
+	
+	double par[7]; // initial parameters par[0]: rotation angle, par[1]-par[3]:rotation axis par[4]-par[6]: translation vector
+	double *pdMeasurements; // Measurements data
+	double *pdAddData; // Additional data for cost function
+	//double axis[3];
+
+	// Set initial parameters
+	GetRotationAxisAndAngle(R, par[0], par + 1);
+	par[4] = t.x; par[5] = t.y; par[6] = t.z;
+
+	//printf("Initial Rotation Matrix\n");
+	//printf("%f %f %f\n",R.m_lpdEntries[0],R.m_lpdEntries[1],R.m_lpdEntries[2]);
+	//printf("%f %f %f\n",R.m_lpdEntries[3],R.m_lpdEntries[4],R.m_lpdEntries[5]);
+	//printf("%f %f %f\n",R.m_lpdEntries[6],R.m_lpdEntries[7],R.m_lpdEntries[8]);
+	//printf("Initial Translation\n");
+	//printf("%f %f %f\n",t.x,t.y,t.z);
+
+	//DebugShowCostForCameraPoseRefinement(pPoints1, pPoints2, nPoints, fx, fy, s, ux, uy, R, t);
+
+	pdMeasurements = new double[2 * nPoints];
+	pdAddData = new double[3 * nPoints + 9]; // 3n for pPoints1, 9 for matrix K
+
+	pdAddData[0] = fx;
+	pdAddData[1] = s;
+	pdAddData[2] = ux;
+	pdAddData[3] = 0.0;
+	pdAddData[4] = fy;
+	pdAddData[5] = uy;
+	pdAddData[6] = 0.0;
+	pdAddData[7] = 0.0;
+	pdAddData[8] = 1.0;
+
+	for (int i = 0; i<nPoints; i++)
+	{
+		pdAddData[3 * i + 9] = pPoints1[i].x;
+		pdAddData[3 * i + 1 + 9] = pPoints1[i].y;
+		pdAddData[3 * i + 2 + 9] = pPoints1[i].z;
+		pdMeasurements[2 * i] = pPoints2[i].x;
+		pdMeasurements[2 * i + 1] = pPoints2[i].y;
+	}
+
+	double info[LM_INFO_SZ];
+	//int ret = dlevmar_dif(CostFunctionForCameraRefinement, par, pdMeasurements, 7, 2 * nPoints, 1000, NULL, info, NULL, NULL, pdAddData);  // no Jacobian
 	//printf("Initial Cost=%f Final Cost=%f\n",info[0],info[1]);
 	//printf("# Iter= %d\n",ret);
 
@@ -558,23 +622,23 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], Featur
 	cout << "PoseEstimation by homography is successful.\n";
 }
 
-void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::vector<KeyFrame> &keyFrames, FrameMetaData &currData, std::vector<int> &neighboringKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
+void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::vector<cv::Point3d> &r3dPts, std::vector<KeyFrame> &keyFrames, FrameMetaData &currData, std::vector<int> &neighboringKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
 {
-	cout << "PoseEstimation by PnP Start.\n";
+	cout << "PoseEstimation by PnP Ransac start.\n";
 
-	std::vector<cv::Point3d> matching3DPts;
-	std::vector<cv::Point2f> matching2DPts;
+	std::vector<cv::Point3d> matching3dPts;
+	std::vector<cv::Point2f> matching2dPts;
 	for (std::vector< std::vector<cv::DMatch> >::size_type i = 0; i < goodMatchesSet.size(); ++i)
 	{
 		std::vector<int>::size_type index = (std::vector<int>::size_type) i;
 		for (std::vector<cv::DMatch>::size_type j = 0; j < goodMatchesSet[i].size(); ++j)
 		{
-			matching2DPts.push_back(currData.keypoints[goodMatchesSet[i][j].queryIdx].pt);
-			matching3DPts.push_back(keyFrames[neighboringKeyFrameIdx[index]].r3dPts[goodMatchesSet[i][j].trainIdx]);
+			matching2dPts.push_back(currData.keypoints[goodMatchesSet[i][j].queryIdx].pt);
+			matching3dPts.push_back(r3dPts[keyFrames[neighboringKeyFrameIdx[index]].ptIdx[goodMatchesSet[i][j].trainIdx]]);
 		}
 	}
 
-	if ((int)matching3DPts.size() < 4)
+	if ((int)matching3dPts.size() < 4)
 	{
 		/*cout << "SolvePnP size < 4\n";
 		cout << "SolvePnP Size : " << matchingCount << endl;*/
@@ -588,13 +652,21 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 	cv::Mat rVec, t;
 	std::vector<uchar> inliers;
 
-	cv::solvePnPRansac(matching3DPts, matching2DPts, K, distCoeffs, rVec, t, false, 100, 8.0, 100, inliers);
+	cv::solvePnPRansac(matching3dPts, matching2dPts, K, distCoeffs, rVec, t, false, 100, 8.0, 100, inliers);
 
 	if ((int)inliers.size() < 4)
 	{
 		cout << "SolveRansacPnP's inliers size < 4\n";
 		currData.state = 'F';
 		return;
+	}
+	std::vector<cv::Point2f> inliers2D;
+	std::vector<cv::Point3d> inliers3D;
+
+	for (int i = 0; i < inliers.size(); ++i)
+	{
+		inliers2D.push_back(matching2dPts[i]);
+		inliers3D.push_back(matching3dPts[i]);
 	}
 
 	//Rotation vector to rotation matrix
@@ -607,6 +679,10 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 		currData.R.m_lpdEntries[i] = R.at<double>(i);
 
 	currData.t.x = t.at<double>(0); currData.t.y = t.at<double>(1); currData.t.z = t.at<double>(2);
+
+	//RefineCameraPose需要修改
+	RefineCameraPose(inliers3D, inliers2D, (int)inliers.size(), cameraPara[0], cameraPara[4], cameraPara[1], cameraPara[2], cameraPara[5], currData.R, currData.t);
+	
 	currData.timeStamp = clock() / CLOCKS_PER_SEC;
 	currData.state = 'P';
 
@@ -623,5 +699,5 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 	trans[2][2] = currData.R.m_lpdEntries[8];
 	trans[2][3] = currData.t.z;
 
-	cout << "PoseEstimation by PnP is successful.\n";
+	cout << "PoseEstimation by PnP Ransac is successful.\n";
 }

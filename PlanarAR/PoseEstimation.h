@@ -5,6 +5,7 @@
 #include <vector>
 #include "SiftGPU.h"
 #include "KeyFrame.h"
+#include "SFMUtil.h"
 #include "opencv2/opencv.hpp"
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -23,6 +24,6 @@ public:
 void EstimateCameraTransformation(double *cameraPara, double trans[3][4], FeatureMap &featureMap, FrameMetaData &currFrame, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers);
 
 /*	Estimation method : PnP Ransac(OpenCV)	*/
-void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::vector<KeyFrame> &keyFrames, FrameMetaData &currFrame, std::vector<int> &neighboringKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet);
+void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::vector<cv::Point3d> &r3dPts, std::vector<KeyFrame> &keyFrames, FrameMetaData &currFrame, std::vector<int> &neighboringKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet);
 
 #endif

@@ -8,7 +8,6 @@
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
-
 class SFM_Feature
 {
 public:
@@ -33,6 +32,6 @@ bool OptimalTriangulation(const MyMatrix &P1, const MyMatrix &P2, const cv::Poin
 void CalculateCameraParameters(const MyMatrix &P, MyMatrix &K, MyMatrix &R, MyMatrix &t);
 double EstimateFocalLength(MyMatrix &F, double u0, double v0, double u1, double v1);
 
-void Triangulation(double *cameraPara, std::vector<KeyFrame> &keyFrames);
+void Triangulation(double *cameraPara, std::vector<SFM_Feature> &SFM_Features,std::vector<KeyFrame> &keyFrames, std::vector<cv::Point3d> &r3dPoints);
 //Local or Global Optimization function
 #endif

@@ -8,7 +8,9 @@
 #include "opencv2/features2d/features2d.hpp"
 #include "Matrix\MyMatrix.h"
 #include "BasicType.h"
+#include <map>
 using std::vector;
+using std::map;
 
 class FrameMetaData
 {
@@ -29,8 +31,9 @@ public:
 	std::vector<cv::KeyPoint> keypoints;
 	cv::Mat descriptors;
 
-	//	3D map	
-	std::vector<int> coresIdx; //	correspondence of index in keyframe(3D-2D)
+	//	3D map
+	std::vector<int> ptIdx;		//	index of 3D points which are in the keyframe
+	//map<int, int> coresMap;
 	std::vector<cv::Point3d> r3dPts;
 
 	//	Matrix
