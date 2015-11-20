@@ -633,15 +633,27 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 		std::vector<int>::size_type index = (std::vector<int>::size_type) i;
 		for (std::vector<cv::DMatch>::size_type j = 0; j < goodMatchesSet[i].size(); ++j)
 		{
-			matching2dPts.push_back(currData.keypoints[goodMatchesSet[i][j].queryIdx].pt);
-			matching3dPts.push_back(r3dPts[keyFrames[neighboringKeyFrameIdx[index]].ptIdx[goodMatchesSet[i][j].trainIdx]]);
+			/*
+			cout <<"1 :"<< index << endl;
+			cout <<"2 :"<< i << endl;
+			cout <<"3 :"<< j << endl;
+			cout << "Key" << keyFrames.size() << endl;
+			cout << "size : " << keyFrames[neighboringKeyFrameIdx[index]].ptIdx.size() << endl;
+			*/
+
+			if (keyFrames[neighboringKeyFrameIdx[index]].ptIdx.size() == 0)
+			{
+				continue;
+				//bug fuck u
+			}
+			matching3dPts.push_back(r3dPts[keyFrames[neighboringKeyFrameIdx[index]].ptIdx[goodMatchesSet[i][j].queryIdx]]);
+			matching2dPts.push_back(currData.keypoints[goodMatchesSet[i][j].trainIdx].pt);
 		}
 	}
 
 	if ((int)matching3dPts.size() < 4)
 	{
-		/*cout << "SolvePnP size < 4\n";
-		cout << "SolvePnP Size : " << matchingCount << endl;*/
+		cout << "PnP estimation failed\n";
 		currData.state = 'F';
 		return;
 	}
@@ -650,11 +662,11 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 	for (int i = 0; i < 9; ++i)
 		K.at<double>(i) = cameraPara[i];
 	cv::Mat rVec, t;
-	std::vector<uchar> inliers;
+	cv::Mat inliers;
 
 	cv::solvePnPRansac(matching3dPts, matching2dPts, K, distCoeffs, rVec, t, false, 100, 8.0, 100, inliers);
 
-	if ((int)inliers.size() < 4)
+	if ((int)inliers.rows < 4)
 	{
 		cout << "SolveRansacPnP's inliers size < 4\n";
 		currData.state = 'F';
@@ -663,8 +675,10 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 	std::vector<cv::Point2f> inliers2D;
 	std::vector<cv::Point3d> inliers3D;
 
-	for (int i = 0; i < inliers.size(); ++i)
+	cout << "Inliers: " << inliers << endl;
+	for (int i = 0; i < inliers.rows; ++i)
 	{
+		//cout << inliers[i] << endl;
 		inliers2D.push_back(matching2dPts[i]);
 		inliers3D.push_back(matching3dPts[i]);
 	}
@@ -681,7 +695,7 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 	currData.t.x = t.at<double>(0); currData.t.y = t.at<double>(1); currData.t.z = t.at<double>(2);
 
 	//RefineCameraPose»Ý­n­×§ï
-	RefineCameraPose(inliers3D, inliers2D, (int)inliers.size(), cameraPara[0], cameraPara[4], cameraPara[1], cameraPara[2], cameraPara[5], currData.R, currData.t);
+	RefineCameraPose(inliers3D, inliers2D, inliers.rows, cameraPara[0], cameraPara[4], cameraPara[1], cameraPara[2], cameraPara[5], currData.R, currData.t);
 	
 	currData.timeStamp = clock() / CLOCKS_PER_SEC;
 	currData.state = 'P';

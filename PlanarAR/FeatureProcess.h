@@ -21,11 +21,14 @@ using cv::imshow;
 using cv::waitKey;
 using cv::imwrite;
 
+/*	Matching method : Flann(OpenCV)	*/
 void FlannMatching(cv::Mat &descriptors1, cv::Mat &descriptors2, std::vector<cv::DMatch> &matches);
-/* FeatureMap */
+
+/* FeatureMap(In database) */
 bool FeatureDetection(FeatureMap &featureMap, unsigned int minHessian);
-/* Any Scene */
-bool FeatureDetection(unsigned int minHessian, FrameMetaData &currData, cv::Mat &currFrameImg);
+
+/* Any scenes */
+bool FeatureDetection(FrameMetaData &currData, cv::Mat &currFrameImg, unsigned int minHessian);
 
 /*	Homography	*/
 bool FeatureMatching(FeatureMap &featureMap, FrameMetaData &currFrame, cv::Mat &currFrameImg, cv::Mat &prevFrameImg, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapGoodMatches, std::vector<cv::Point2f> &prevFrameGoodMatches);

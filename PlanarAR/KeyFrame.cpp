@@ -162,7 +162,7 @@ void FindNeighboringKeyFrames(std::vector<KeyFrame> &keyFrames, FrameMetaData &c
 	int index = 0;
 	for (std::vector<KeyFrame>::iterator KF = keyFrames.begin(); index < keyFramesSize; ++index)
 	{
-		/*cv::Point3d r3dPt;
+		cv::Point3d r3dPt;
 		if (Find3DCoordinates(KF->projMatrix, keyFrames.back().projMatrix, originPt, originPt, r3dPt))
 		{
 			Vector3d r3dVec1, r3dVec2;
@@ -171,8 +171,8 @@ void FindNeighboringKeyFrames(std::vector<KeyFrame> &keyFrames, FrameMetaData &c
 
 			if (isNegihboringKeyFrame(KF->t, keyFrames.back().t, r3dVec1, r3dVec2))
 				neighboringKeyFrameIdx.push_back(index);
-		}*/
-		neighboringKeyFrameIdx.push_back(index);
+		}
+		//neighboringKeyFrameIdx.push_back(index);
 	}
 	//	Push the last keyframe
 	neighboringKeyFrameIdx.push_back(keyFramesSize);

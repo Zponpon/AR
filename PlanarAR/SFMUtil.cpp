@@ -111,11 +111,6 @@ bool Find3DCoordinates(std::vector<MyMatrix> &Ps, const std::vector<cv::Point2f>
 		delete V;
 		return true;
 	}
-	/*delete A;
-	delete U;
-	delete D;
-	delete V;
-	return false;*/
 }
 
 /***************************************************************************************************************/
@@ -628,6 +623,17 @@ void EstablishImageCorrespondences(vector<SFM_Feature> &SFM_Features, std::vecto
 		imgIdx1++;
 		imgIdx2 = imgIdx1 + 1;
 	}
+	/*int lastIdx = (int) (keyFrames.size() - 1);
+	for (std::vector<KeyFrame>::size_type i = 0; i < keyFrames.size() - 1; ++i)
+	{
+		vector<cv::DMatch> goodMatches;
+		FeatureMatching(keyFrames[i], keyFrames.back(), goodMatches);
+		if (goodMatches.size() > 0)
+		{
+			RemoveOutlier(SFM_Features, keyFrames[i], keyFrames.back(), goodMatches);
+			UpdateSFM_Features(SFM_Features, keyFrames[i], (int)i, keyFrames.back(), lastIdx, goodMatches);
+		}
+	}*/
 }
 
 void RemoveRedundantCorrespondences(vector<SFM_Feature> &SFM_Features, const vector<KeyFrame> &keyFrames)	//OpenCV 
@@ -757,14 +763,14 @@ void Triangulation(double *cameraPara, vector<SFM_Feature> &SFM_Features, std::v
 
 	for (vector<SFM_Feature>::iterator feature = SFM_Features.begin(); feature != SFM_Features.end(); ++feature)
 	{
-		if (feature->isValid && !feature->find3d)
+		if (feature->isValid && feature->ptIdx == -1)
 		{
 			vector<cv::Point2f> pts(1, feature->pt);
 			vector<MyMatrix> PMs(1, keyFrames[(std::vector<KeyFrame>::size_type)feature->imgIdx].projMatrix);
 
 			for (std::vector<int>::size_type i = 0; i < feature->cores.size(); ++i)
 			{
-				if (SFM_Features[feature->cores[i]].isValid && !SFM_Features[feature->cores[i]].find3d)
+				if (SFM_Features[feature->cores[i]].isValid && SFM_Features[feature->cores[i]].ptIdx == -1)
 				{
 					pts.push_back(SFM_Features[feature->cores[i]].pt);
 					PMs.push_back(keyFrames[SFM_Features[feature->cores[i]].imgIdx].projMatrix);
@@ -779,14 +785,12 @@ void Triangulation(double *cameraPara, vector<SFM_Feature> &SFM_Features, std::v
 					feature->ptIdx = (int)r3dPts.size();
 					r3dPts.push_back(r3dPt);
 					keyFrames[feature->imgIdx].ptIdx.push_back(feature->ptIdx);
-					feature->find3d = true;
 
 					for (std::vector<int>::size_type i = 0; i < feature->cores.size(); ++i)
 					{
 						//儲存對應到的3D點index
 						SFM_Features[feature->cores[i]].ptIdx = feature->ptIdx;
 						keyFrames[SFM_Features[feature->cores[i]].imgIdx].ptIdx.push_back(feature->ptIdx);
-						SFM_Features[feature->cores[i]].find3d = true;
 					}
 				}
 			}

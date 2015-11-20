@@ -13,7 +13,7 @@ static vector<KeyFrame> keyFrames;
 static std::thread Optimization;
 static vector <Measurement> measurementData;
 static MyMatrix K(3, 3); // Camera Matrix
-vector<int> neighboringKeyFrameIdx;
+//vector<int> neighboringKeyFrameIdx;
 vector<cv::Point3d> r3dPts;	//world coordinate 3d points
 
 static vector<SFM_Feature> SFM_Features;
@@ -71,10 +71,10 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 	}
 	*/
 	FrameMetaData currData; //	Record the current frame data
-	if (!FeatureDetection(3000, currData, currFrameMat)) return false;
+	if (!FeatureDetection(currData, currFrameMat, 3000)) return false;
 
 	vector<cv::Point2f> currFrameGoodMatches, featureMapGoodMatches;
-	//vector<int> neighboringKeyFrameIdx;
+	vector<int> neighboringKeyFrameIdx;
 	vector< vector<cv::DMatch> > goodMatchesSet;
 
 	if (FeatureMatching(featureMap, currData, currFrameMat, prevFrameMat, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
@@ -83,7 +83,7 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 		if (keyFrames.size() == 0)
 		{
 			CreateKeyFrame(K, currData, currFrameMat, keyFrames);
-			neighboringKeyFrameIdx.push_back(0);
+			//neighboringKeyFrameIdx.push_back(0);
 			currData.state = 'H';
 			frameMetaDatas.push_back(currData);
 			return true;
@@ -92,20 +92,19 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 	else if (FeatureMatching(cameraPara, SFM_Features, keyFrames, currData, currFrameMat, neighboringKeyFrameIdx, goodMatchesSet))
 	{
 		EstimateCameraTransformation(cameraPara, trans, r3dPts, keyFrames, currData, neighboringKeyFrameIdx, goodMatchesSet);
-		if (currData.state == 'F')
-			return false;
+		if (currData.state == 'F') return false;
 	}
 	else return false;
 
 	if (KeyFrameSelection(K, keyFrames.back(), currData, measurementData))
 	{
-		if (keyFrames.size() < 4)
-		{
-		//	neighboringKeyFrameIdx.push_back((int)keyFrames.size());
+		//if (keyFrames.size() < 4)
+		//{
+			//neighboringKeyFrameIdx.push_back((int)keyFrames.size());
 			CreateKeyFrame(K, currData, currFrameMat, keyFrames);
 			Triangulation(cameraPara, SFM_Features, keyFrames, r3dPts);
 			//Optimization = std::thread(Triangulation, cameraPara, ref(SFM_Features), ref(keyFrames), ref(r3dpts));
-		}
+		//}
 	}
 
 	frameMetaDatas.push_back(currData);

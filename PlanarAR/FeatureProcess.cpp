@@ -38,7 +38,7 @@ bool FeatureDetection(FeatureMap &featureMap, unsigned int minHessian)
 	return true;
 }
 
-bool FeatureDetection(unsigned int minHessian, FrameMetaData &currData, cv::Mat &currFrameImg)
+bool FeatureDetection(FrameMetaData &currData, cv::Mat &currFrameImg, unsigned int minHessian )
 {
 	SurfDetection(currFrameImg, currData.keypoints, currData.descriptors, minHessian);
 	if (currData.keypoints.size() == 0)
@@ -228,6 +228,7 @@ bool FeatureMatching(FeatureMap &featureMap, FrameMetaData &currData, cv::Mat &c
 
 void FindGoodMatches(std::vector<cv::DMatch> &matches, std::vector<cv::DMatch> &goodMatches)
 {
+	//Bug
 	double max_dist = 0; double min_dist = 100;
 	for (std::vector<cv::DMatch>::size_type i = 0; i < matches.size(); i++)
 	{
@@ -248,7 +249,7 @@ void FindGoodMatches(std::vector<cv::DMatch> &matches, std::vector<cv::DMatch> &
 
 	//標記一對多的點為false-> goodMatches
 	std::vector<bool> GoodMatchesFlag((int)goodMatches.size(), true);
-	for (int j = 0; j < (int)goodMatches.size(); j++)
+	for (int j = 0; j < goodMatches.size(); j++)
 	{
 		std::vector<cv::DMatch>::size_type index = (std::vector<cv::DMatch>::size_type) j;	//紀錄distance較小的index
 		double distance = goodMatches[index].distance;
@@ -284,52 +285,46 @@ void FindGoodMatches(std::vector<cv::DMatch> &matches, std::vector<cv::DMatch> &
 /*	Ransac PnP	*/
 bool FeatureMatching(double *cameraPara, std::vector<SFM_Feature> &SFM_Features, std::vector<KeyFrame> &keyFrames, FrameMetaData &currData, cv::Mat &currFrameImg, std::vector<int> &neighboringKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
 {
-	/* When we move the camera to the place where are without the featureMap                  */
-	/* We use the last keyframe to find the neighboring keyframes in the keyframe set         */
-	/* Use these 3d points constructed by keyframes we found to estimate our camera pose(PnP) */
+	/* When we move the camera to the place where are without the featureMap                       */
+	/* We use the last keyframe to find the neighboring keyframes in the keyframe set			   */
+	/* Use these 3d points constructed by keyframes that we found to estimate our camera pose(PnP) */
 
 	if (keyFrames.size() < 2)
-	{
-		if (neighboringKeyFrameIdx.size() != 0 && (int)keyFrames.size() > 0)
-		{
-			if ((int)(keyFrames.size() - 1) != neighboringKeyFrameIdx.back())
-				neighboringKeyFrameIdx.push_back((int)(keyFrames.size() - 1));
-		}
 		return false;
-	}
 
 	cout << "Start matching scene with keyframes.\n";
 
-	//FindNeighboringKeyFrames(keyFrames, currData, neighboringKeyFrameIdx);
-	if (keyFrames.size() <= 4 && neighboringKeyFrameIdx.back() != (int)keyFrames.size() - 1)
-	{
-		neighboringKeyFrameIdx.push_back((int)keyFrames.size() - 1);
-	}
-	/*if (neighboringKeyFrameIdx.size() == 0)
+	FindNeighboringKeyFrames(keyFrames, currData, neighboringKeyFrameIdx);
+	if (neighboringKeyFrameIdx.size() == 0)
 	{
 		cout << "Neighboring keyframe size is zero.\n";
 		return false;
-	}*/
+	}
 
 	for (std::vector<int>::iterator queryIdx = neighboringKeyFrameIdx.begin(); queryIdx != neighboringKeyFrameIdx.end(); ++queryIdx)
 	{
-		int r3dPtsCount = (int)keyFrames[(vector<KeyFrame>::size_type)*queryIdx].ptIdx.size();
+		int r3dPtsCount = (int)keyFrames[*queryIdx].ptIdx.size();
 		if (r3dPtsCount == 0)
 			continue;
 
 		int index = 0;
-		cv::Mat descriptors(r3dPtsCount, currData.descriptors.cols, currData.descriptors.type());
+		cv::Mat descriptors(r3dPtsCount, currData.descriptors.cols, CV_32F);
 		for (std::vector<SFM_Feature>::iterator feature = SFM_Features.begin(); feature != SFM_Features.end(); ++feature)
 		{
-			if (feature->imgIdx == *queryIdx)
+			if (feature->imgIdx == *queryIdx && feature->ptIdx != -1)
 			{
 				keyFrames[*queryIdx].descriptors.row(feature->descriptorIdx).copyTo(descriptors.row(index));
+				index++;
 			}
 		}
 
 		std::vector<cv::DMatch> matches, goodMatches;
-		FlannMatching(currData.descriptors, descriptors, matches);
+		//keyframe->query, current frame->train
+		FlannMatching(descriptors, currData.descriptors, matches);
 		FindGoodMatches(matches, goodMatches);
+ 	//	DebugOpenCVMatchPoint(keyFrames[*queryIdx].image, keyFrames[*queryIdx].keypoints, currFrameImg, currData.keypoints,  goodMatches, "Test.jpg");
+		if (goodMatches.size() == 0)
+			continue;
 		goodMatchesSet.push_back(goodMatches);
 	}
 
