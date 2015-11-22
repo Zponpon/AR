@@ -8,7 +8,7 @@
 using std::cout;
 using std::endl;
 
-unsigned int keyFrameIdx = 1;
+unsigned int keyframeIdx = 1;
 
 void CreateProjMatrix(MyMatrix &K, const MyMatrix &R, const Vector3d &t, MyMatrix &projMatrix)
 {
@@ -29,7 +29,7 @@ void CreateProjMatrix(MyMatrix &K, const MyMatrix &R, const Vector3d &t, MyMatri
 	projMatrix = K * projMatrix;
 }
 
-void CreateKeyFrame(MyMatrix &K, FrameMetaData &currData, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames)
+void CreateKeyFrame(MyMatrix &K, FrameMetaData &currData, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyframes)
 {
 	KeyFrame keyframe;
 
@@ -42,10 +42,10 @@ void CreateKeyFrame(MyMatrix &K, FrameMetaData &currData, cv::Mat &currFrameImg,
 	keyframe.t = currData.t;
 	CreateProjMatrix(K, keyframe.R, keyframe.t, keyframe.projMatrix);
 
-	keyFrames.push_back(keyframe);
+	keyframes.push_back(keyframe);
 	std::stringstream fileNameStream;
 	std::string fileName;
-	fileNameStream << "KeyFrame" << keyFrameIdx++ << ".jpg";
+	fileNameStream << "KeyFrame" << keyframeIdx++ << ".jpg";
 	fileName = fileNameStream.str();
 	SavingKeyFrame(fileName, keyframe.image);
 	
@@ -79,22 +79,23 @@ double calcAngle(MyMatrix &K, MyMatrix &R1, MyMatrix &R2)
 	return angle;
 }
 
-bool KeyFrameSelection(MyMatrix &K, KeyFrame &keyFramesBack, FrameMetaData &currData, vector <Measurement> &measurementData)
+bool KeyFrameSelection(MyMatrix &K, KeyFrame &keyframesBack, FrameMetaData &currData, vector <Measurement> &measurementData)
 {
-	double distance = calcDistance(keyFramesBack.t, currData.t);
+	double distance = calcDistance(keyframesBack.t, currData.t);
 	if (distance <= 250.0f || isnan(distance))
 	{
 		cout << "Distance : " << distance << endl;
 		return false;
 	}
 
-	double angle = calcAngle(K, keyFramesBack.R, currData.R);
+	double angle = calcAngle(K, keyframesBack.R, currData.R);
 	if (angle <= 30.0f || isnan(angle))
 	{
 		cout << "Angle : " << angle << endl;
 		return false;
 	}
-
+	cout << "Distance : " << distance << endl;
+	cout << "Angle : " << angle << endl;
 	Measurement measurement;
 	measurement.distance = distance;
 	measurement.angle = angle;
@@ -153,27 +154,27 @@ bool isNegihboringKeyFrame(Vector3d &t1, Vector3d &t2, Vector3d &r3dVec1, Vector
 	return true;
 }
 
-void FindNeighboringKeyFrames(std::vector<KeyFrame> &keyFrames, FrameMetaData &currData, std::vector<int> &neighboringKeyFrameIdx)
+void FindNeighboringKeyFrames(std::vector<KeyFrame> &keyframes, FrameMetaData &currData, std::vector<int> &neighboringKeyFrameIdx)
 {
 	/*	Use the last keyframe for finding the neighboring keyframes	*/
 	//目前全部比對
-	int keyFramesSize = (int)keyFrames.size() - 1;
 	cv::Point2f originPt(400.0f, 300.0f);
+	int keyframesSize = (int)keyframes.size() - 1;
 	int index = 0;
-	for (std::vector<KeyFrame>::iterator KF = keyFrames.begin(); index < keyFramesSize; ++index)
+	for (std::vector<KeyFrame>::iterator KF = keyframes.begin(); index < keyframesSize; ++index)
 	{
 		cv::Point3d r3dPt;
-		if (Find3DCoordinates(KF->projMatrix, keyFrames.back().projMatrix, originPt, originPt, r3dPt))
+		if (Find3DCoordinates(KF->projMatrix, keyframes.back().projMatrix, originPt, originPt, r3dPt))
 		{
 			Vector3d r3dVec1, r3dVec2;
 			WorldToCamera(KF->R, KF->t, r3dPt, r3dVec1);
-			WorldToCamera(keyFrames.back().R, keyFrames.back().t, r3dPt, r3dVec2);
+			WorldToCamera(keyframes.back().R, keyframes.back().t, r3dPt, r3dVec2);
 
-			if (isNegihboringKeyFrame(KF->t, keyFrames.back().t, r3dVec1, r3dVec2))
+			if (isNegihboringKeyFrame(KF->t, keyframes.back().t, r3dVec1, r3dVec2))
 				neighboringKeyFrameIdx.push_back(index);
 		}
 		//neighboringKeyFrameIdx.push_back(index);
 	}
 	//	Push the last keyframe
-	neighboringKeyFrameIdx.push_back(keyFramesSize);
+	neighboringKeyFrameIdx.push_back(keyframesSize);
 }

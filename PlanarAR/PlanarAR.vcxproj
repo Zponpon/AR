@@ -122,7 +122,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>S:\OpenCV2.4.10\opencv\build\include;S:\AR\SiftGPU\src\SiftGPU;S:\AR\ARToolKit\include;C:\opencv\build\include;C:\Users\godtone\Desktop\AR\SiftGPU\src\SiftGPU;C:\Users\godtone\Desktop\AR\ARToolKit\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>H:\OpenCV2.4.10\opencv\build\include;H:\AR\SiftGPU\src\SiftGPU;H:\AR\ARToolKit\include;C:\opencv\build\include;C:\Users\godtone\Desktop\AR\SiftGPU\src\SiftGPU;C:\Users\godtone\Desktop\AR\ARToolKit\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -130,7 +130,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalOptions>/NODEFAULTLIB:"atlthunk"</AdditionalOptions>
-      <AdditionalLibraryDirectories>S:\OpenCV2.4.10\opencv\build\x86\vc12\lib;S:\AR\SiftGPU\lib;S:\AR\ARToolKit\lib;C:\Users\godtone\Desktop\AR\SiftGPU\lib;C:\opencv\build\x86\vc12\lib;C:\Users\godtone\Desktop\AR\ARToolKit\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>H:\OpenCV2.4.10\opencv\build\x86\vc12\lib;H:\AR\SiftGPU\lib;H:\AR\ARToolKit\lib;C:\Users\godtone\Desktop\AR\SiftGPU\lib;C:\opencv\build\x86\vc12\lib;C:\Users\godtone\Desktop\AR\ARToolKit\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>opencv_features2d2410.lib;opencv_calib3d2410.lib;opencv_core2410.lib;opencv_highgui2410.lib;opencv_flann2410.lib;opencv_nonfree2410.lib;opencv_video2410.lib;opencv_imgproc2410.lib;opencv_stitching2410.lib;SIFTGPU.lib;libAR.lib;libARgsub.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
@@ -184,6 +184,7 @@
     <Library Include="levmar.lib" />
     <Library Include="MathLib\MathLib.lib" />
     <Library Include="Matrix\Matrix.lib" />
+    <Library Include="pba.lib" />
     <Library Include="videoInput.lib" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

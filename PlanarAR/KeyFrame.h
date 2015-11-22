@@ -9,8 +9,11 @@
 #include "Matrix\MyMatrix.h"
 #include "BasicType.h"
 #include <map>
+
 using std::vector;
 using std::map;
+
+enum PoseEstimationMethod{ ByHomography, ByRansacPnP, Fail };
 
 class FrameMetaData
 {
@@ -19,6 +22,7 @@ public:
 	cv::Mat descriptors;
 	clock_t timeStamp;
 	char state;
+	PoseEstimationMethod method;
 	MyMatrix R;
 	Vector3d t;
 };

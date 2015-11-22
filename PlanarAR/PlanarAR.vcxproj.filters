@@ -97,5 +97,6 @@
       <Filter>原始程式檔\MathLib</Filter>
     </Library>
     <Library Include="glut32.lib" />
+    <Library Include="pba.lib" />
   </ItemGroup>
 </Project>

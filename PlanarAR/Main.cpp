@@ -8,7 +8,7 @@
 #include "PoseEstimation.h"
 #include "KeyFrame.h"
 #include "DebugFunc.h"
-#include "Video.h"	
+#include "Video.h"
 
 #define VIEW_VOLUME_NEAR 1.0
 #define VIEW_VOLUME_FAR 3000.0

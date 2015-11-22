@@ -12,6 +12,9 @@
 #include "MathLib\MathLib.h"
 #include "levmar.h"
 
+#include "pba\pba.h"
+#include "pba\util.h"
+
 
 
 /***************************************************************************************************************/
@@ -605,7 +608,7 @@ void RemoveOutlier(vector<SFM_Feature> &SFM_Features, KeyFrame &query, KeyFrame 
 
 void EstablishImageCorrespondences(vector<SFM_Feature> &SFM_Features, std::vector<KeyFrame> &keyFrames)
 {
-	int imgIdx1 = 0, imgIdx2 = 1;
+	/*int imgIdx1 = 0, imgIdx2 = 1;
 	for (std::vector<KeyFrame>::size_type i = 0; i < keyFrames.size(); ++i)
 	{
 		for (std::vector<KeyFrame>::size_type j = i + 1; j < keyFrames.size(); ++j)
@@ -622,8 +625,8 @@ void EstablishImageCorrespondences(vector<SFM_Feature> &SFM_Features, std::vecto
 		}
 		imgIdx1++;
 		imgIdx2 = imgIdx1 + 1;
-	}
-	/*int lastIdx = (int) (keyFrames.size() - 1);
+	}*/
+	int lastIdx = (int) (keyFrames.size() - 1);
 	for (std::vector<KeyFrame>::size_type i = 0; i < keyFrames.size() - 1; ++i)
 	{
 		vector<cv::DMatch> goodMatches;
@@ -633,7 +636,7 @@ void EstablishImageCorrespondences(vector<SFM_Feature> &SFM_Features, std::vecto
 			RemoveOutlier(SFM_Features, keyFrames[i], keyFrames.back(), goodMatches);
 			UpdateSFM_Features(SFM_Features, keyFrames[i], (int)i, keyFrames.back(), lastIdx, goodMatches);
 		}
-	}*/
+	}
 }
 
 void RemoveRedundantCorrespondences(vector<SFM_Feature> &SFM_Features, const vector<KeyFrame> &keyFrames)	//OpenCV 
@@ -745,35 +748,131 @@ void RemoveRedundantCorrespondences(vector<SFM_Feature> &SFM_Features, const vec
 	}
 }
 
-void BundleAdjustment(std::vector<KeyFrame> &keyFrames)
+void BundleAdjustment(double f, std::vector<KeyFrame> &keyframes, std::vector<cv::Point3d> &r3dPts, std::vector<SFM_Feature> &SFM_Features)
 {
-	//We do global or local optimization at here
+	////////////////////////////////////////////////////////
+	//	Do global optimization at here(Bundle Adjustment)
+	//	Method : PBA()
+	////////////////////////////////////////////////////////
+
+	std::vector<CameraT> cameras;
+	std::vector<Point3D> points;
+	std::vector<Point2D> measurementPts;
+	std::vector<int>	 camIdxs, ptIdxs;
+	
+	ParallelBA::DeviceT device = ParallelBA::PBA_CUDA_DEVICE_DEFAULT;
+	device = ParallelBA::PBA_CPU_DOUBLE;
+	ParallelBA pba(device);
+
+	if (keyframes.size() < 6)
+	{
+		char * argv[] = { "-lmi", "100", "-v", "1" };
+		int argc = sizeof(argv) / sizeof(char*);
+		pba.ParseParam(argc, argv);
+	}
+	else
+	{
+		char * argv[] = { "-v", "1" };
+		int argc = sizeof(argv) / sizeof(char*);
+		pba.ParseParam(argc, argv);
+	}
+
+	for (int i = 0; i < keyframes.size(); ++i)
+	{
+		CameraT camera;
+
+		//Focal length
+		camera.f = f;
+
+		//Translation vector
+		camera.t[0] = keyframes[i].t.x;
+		camera.t[1] = keyframes[i].t.y;
+		camera.t[2] = keyframes[i].t.z;
+		
+		//Rotation matrix
+		camera.m[0][0] = keyframes[i].R.m_lpdEntries[0];
+		camera.m[0][1] = keyframes[i].R.m_lpdEntries[1];
+		camera.m[0][2] = keyframes[i].R.m_lpdEntries[2];
+		camera.m[1][0] = keyframes[i].R.m_lpdEntries[3];
+		camera.m[1][1] = keyframes[i].R.m_lpdEntries[4];
+		camera.m[1][2] = keyframes[i].R.m_lpdEntries[5];
+		camera.m[2][0] = keyframes[i].R.m_lpdEntries[6];
+		camera.m[2][1] = keyframes[i].R.m_lpdEntries[7];
+		camera.m[2][2] = keyframes[i].R.m_lpdEntries[8];
+
+		cameras.push_back(camera);
+	}
+
+	for (int i = 0; i < r3dPts.size(); ++i)
+	{
+		Point3D point;
+		point.xyz[0] = r3dPts[i].x;
+		point.xyz[1] = r3dPts[i].y;
+		point.xyz[2] = r3dPts[i].z;
+
+		points.push_back(point);
+	}
+	for (int i = 0; i < r3dPts.size(); ++i)
+	{
+		for (std::vector<SFM_Feature>::iterator feature = SFM_Features.begin(); feature != SFM_Features.end(); ++feature)
+		{
+			if (feature->ptIdx == i)
+			{
+				Point2D measurementPt;
+				measurementPt.x = feature->pt.x;
+				measurementPt.y = feature->pt.y;
+
+				measurementPts.push_back(measurementPt);
+				camIdxs.push_back(feature->imgIdx);
+				ptIdxs.push_back(feature->descriptorIdx);
+			}
+		}
+	}
+
+	pba.SetCameraData(cameras.size(), &cameras[0]);
+	pba.SetPointData(points.size(), &points[0]);
+	pba.SetProjection(measurementPts.size(), &measurementPts[0], &ptIdxs[0], &camIdxs[0]);
+
+	//Bug？
+	pba.RunBundleAdjustment();
+	
+	for (int i = 0; i < points.size(); ++i)
+	{
+		cv::Point3d point;
+		point.x = points[i].xyz[0];
+		point.y = points[i].xyz[1];
+		point.z = points[i].xyz[2];
+
+		//Optimized points
+		r3dPts[i] = point;
+	}
+	
 }
 
-void Triangulation(double *cameraPara, vector<SFM_Feature> &SFM_Features, std::vector<KeyFrame> &keyFrames, std::vector<cv::Point3d> &r3dPts)
+void Triangulation(double *cameraPara, vector<SFM_Feature> &SFM_Features, std::vector<KeyFrame> &keyframes, std::vector<cv::Point3d> &r3dPts)
 {
 	//This process is done by another thread
 	
-	if ((int)keyFrames.size() < 2) 
+	if ((int)keyframes.size() < 2) 
 		return;
 
 	cout << "Starting triangulation.\n";
 
-	EstablishImageCorrespondences(SFM_Features, keyFrames);
+	EstablishImageCorrespondences(SFM_Features, keyframes);
 
 	for (vector<SFM_Feature>::iterator feature = SFM_Features.begin(); feature != SFM_Features.end(); ++feature)
 	{
 		if (feature->isValid && feature->ptIdx == -1)
 		{
 			vector<cv::Point2f> pts(1, feature->pt);
-			vector<MyMatrix> PMs(1, keyFrames[(std::vector<KeyFrame>::size_type)feature->imgIdx].projMatrix);
+			vector<MyMatrix> PMs(1, keyframes[(std::vector<KeyFrame>::size_type)feature->imgIdx].projMatrix);
 
 			for (std::vector<int>::size_type i = 0; i < feature->cores.size(); ++i)
 			{
 				if (SFM_Features[feature->cores[i]].isValid && SFM_Features[feature->cores[i]].ptIdx == -1)
 				{
 					pts.push_back(SFM_Features[feature->cores[i]].pt);
-					PMs.push_back(keyFrames[SFM_Features[feature->cores[i]].imgIdx].projMatrix);
+					PMs.push_back(keyframes[SFM_Features[feature->cores[i]].imgIdx].projMatrix);
 				}
 			}
 
@@ -784,20 +883,20 @@ void Triangulation(double *cameraPara, vector<SFM_Feature> &SFM_Features, std::v
 				{
 					feature->ptIdx = (int)r3dPts.size();
 					r3dPts.push_back(r3dPt);
-					keyFrames[feature->imgIdx].ptIdx.push_back(feature->ptIdx);
+					keyframes[feature->imgIdx].ptIdx.push_back(feature->ptIdx);
 
 					for (std::vector<int>::size_type i = 0; i < feature->cores.size(); ++i)
 					{
 						//儲存對應到的3D點index
 						SFM_Features[feature->cores[i]].ptIdx = feature->ptIdx;
-						keyFrames[SFM_Features[feature->cores[i]].imgIdx].ptIdx.push_back(feature->ptIdx);
+						keyframes[SFM_Features[feature->cores[i]].imgIdx].ptIdx.push_back(feature->ptIdx);
 					}
 				}
 			}
 		}
 	}
-	RemoveRedundantCorrespondences(SFM_Features, keyFrames);
-	//BundleAdjustment();
+	RemoveRedundantCorrespondences(SFM_Features, keyframes);
+//	BundleAdjustment(cameraPara[0], keyframes, r3dPts, SFM_Features);
 
 	cout << "Triangulation is end.\n";
 }
