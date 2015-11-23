@@ -83,8 +83,8 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 		if (keyframes.size() == 0)
 		{
 			CreateKeyFrame(K, currData, currFrameMat, keyframes);
-			//neighboringKeyFrameIdx.push_back(0);
-			currData.state = 'H';
+			neighboringKeyFrameIdx.push_back(0);
+			//currData.state = 'H';
 			currData.method = PoseEstimationMethod::ByHomography;
 			frameMetaDatas.push_back(currData);
 			return true;
@@ -93,12 +93,15 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 	else if (FeatureMatching(cameraPara, SFM_Features, keyframes, currData, currFrameMat, neighboringKeyFrameIdx, goodMatchesSet))
 	{
 		EstimateCameraTransformation(cameraPara, trans, r3dPts, keyframes, currData, neighboringKeyFrameIdx, goodMatchesSet);
-		if (currData.state == 'F') return false;
+
+		if (currData.method == PoseEstimationMethod::Fail) return false;
 	}
 	else
 	{
-		currData.state = 'F';
+		//currData.state = 'F';
 		currData.method = PoseEstimationMethod::Fail;
+		cout << "FeatureMatching failed\n";
+		frameMetaDatas.push_back(currData);
 		return false;
 	}
 

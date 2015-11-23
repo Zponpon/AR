@@ -180,11 +180,11 @@
     <ClInclude Include="VisualOdometry.h" />
   </ItemGroup>
   <ItemGroup>
-    <Library Include="glut32.lib" />
+    <Library Include="glut32\glut32.lib" />
     <Library Include="levmar.lib" />
     <Library Include="MathLib\MathLib.lib" />
     <Library Include="Matrix\Matrix.lib" />
-    <Library Include="pba.lib" />
+    <Library Include="pba\pba.lib" />
     <Library Include="videoInput.lib" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

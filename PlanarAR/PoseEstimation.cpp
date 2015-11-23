@@ -613,7 +613,8 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], Featur
 	m = PoseEstimationMethod::ByHomography;
 	EstimateCameraPoseFromHomography(H, cameraPara[0], cameraPara[4], cameraPara[1], cameraPara[2], cameraPara[5], R, t);
 	RefineCameraPose(featureMapInliers, frameInliers, (int)frameInliers.size(), cameraPara[0], cameraPara[4], cameraPara[1], cameraPara[2], cameraPara[5], R, t);
-
+	
+	//K[R|t]
 	trans[0][0] = R.m_lpdEntries[0];
 	trans[0][1] = R.m_lpdEntries[1];
 	trans[0][2] = R.m_lpdEntries[2];
@@ -668,7 +669,7 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 	if ((int)matching3dPts.size() < 4)
 	{
 		cout << "PnP estimation failed\n";
-		currData.state = 'F';
+		//currData.state = 'F';
 		currData.method = PoseEstimationMethod::Fail;
 		return;
 	}
@@ -684,7 +685,7 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 	if ((int)inliers.rows < 4)
 	{
 		cout << "SolveRansacPnP's inliers size < 4\n";
-		currData.state = 'F';
+		//currData.state = 'F';
 		currData.method = PoseEstimationMethod::Fail;
 		return;
 	}

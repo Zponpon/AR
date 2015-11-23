@@ -94,8 +94,10 @@ bool KeyFrameSelection(MyMatrix &K, KeyFrame &keyframesBack, FrameMetaData &curr
 		cout << "Angle : " << angle << endl;
 		return false;
 	}
+
 	cout << "Distance : " << distance << endl;
 	cout << "Angle : " << angle << endl;
+
 	Measurement measurement;
 	measurement.distance = distance;
 	measurement.angle = angle;
@@ -112,16 +114,21 @@ void WorldToCamera(MyMatrix &R, Vector3d &t, cv::Point3d &r3dPt, Vector3d &r3dVe
 	//From world coordinate to camera coordinate
 
 	MyMatrix pt(3, 1);
+
+	//RXw+tw
+
 	//Rotation R
 	pt.m_lpdEntries[0] = r3dPt.x;
 	pt.m_lpdEntries[1] = r3dPt.y;
 	pt.m_lpdEntries[2] = r3dPt.z;
 	pt = R * pt;
 
-	//Translation t'
+	//Translation t
 	pt.m_lpdEntries[0] = r3dPt.x+t.x;
 	pt.m_lpdEntries[1] = r3dPt.y+t.y;
 	pt.m_lpdEntries[2] = r3dPt.z+t.z;
+
+	
 
 	//Vector
 	r3dVec.x = pt.m_lpdEntries[0];
