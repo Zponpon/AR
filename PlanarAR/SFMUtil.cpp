@@ -865,7 +865,7 @@ void BundleAdjustment(double *cameraPara, std::vector<KeyFrame> &keyframes, std:
 		r3dPts[i].z = point.z;
 	}
 
-	/*for (int i = 0; i < cameras.size(); ++i)
+	for (int i = 0; i < cameras.size(); ++i)
 	{
 		keyframes[i].R.m_lpdEntries[0] = cameras[i].m[0][0];
 		keyframes[i].R.m_lpdEntries[1] = cameras[i].m[0][1];
@@ -880,7 +880,7 @@ void BundleAdjustment(double *cameraPara, std::vector<KeyFrame> &keyframes, std:
 		keyframes[i].t.x = cameras[i].t[0];
 		keyframes[i].t.y = cameras[i].t[1];
 		keyframes[i].t.z = cameras[i].t[2];
-	}*/
+	}
 	
 }
 
@@ -927,9 +927,7 @@ void Triangulation(double *cameraPara, vector<SFM_Feature> &SFM_Features, std::v
 			}
 		}
 	}
-	/*std::vector<SFM_Feature> temp;
-	temp = SFM_Features;
-	cout << temp.size() << endl;*/
+
 	RemoveRedundantCorrespondences(SFM_Features, keyframes);
 	BundleAdjustment(cameraPara, keyframes, r3dPts, SFM_Features);
 

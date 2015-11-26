@@ -708,7 +708,6 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 	currData.R.CreateMatrix(3, 3);
 	for (int i = 0; i < 9; ++i)
 		currData.R.m_lpdEntries[i] = R.at<double>(i);
-
 	currData.t.x = t.at<double>(0); currData.t.y = t.at<double>(1); currData.t.z = t.at<double>(2);
 
 	//RefineCameraPose»Ý­n­×§ï

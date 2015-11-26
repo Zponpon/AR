@@ -251,8 +251,8 @@ void display(void)
 		else if (method == 'P')
 		{
 			glTranslated(0.0, 00.0, 50.0);
-			glRotated(0.0, 1.0, 0.0, 0.0);
-			glutSolidCube(100.0);
+			glRotated(90.0, 1.0, 0.0, 0.0);
+			glutWireTeapot(50.0);
 		}
 	}
 	glutSwapBuffers();
