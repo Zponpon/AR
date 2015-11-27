@@ -30,6 +30,7 @@ void FlannMatching(cv::Mat &descriptors1, cv::Mat &descriptors2, std::vector<cv:
 	glutSetWindow(win);
 }
 
+#pragma region FeatureDetection
 bool FeatureDetection(FeatureMap &featureMap, unsigned int minHessian)
 {
 	//Detect keypoints of featureMaps only
@@ -39,6 +40,7 @@ bool FeatureDetection(FeatureMap &featureMap, unsigned int minHessian)
 	return true;
 }
 
+
 bool FeatureDetection(FrameMetaData &currData, cv::Mat &currFrameImg, unsigned int minHessian )
 {
 	SurfDetection(currFrameImg, currData.keypoints, currData.descriptors, minHessian);
@@ -46,6 +48,7 @@ bool FeatureDetection(FrameMetaData &currData, cv::Mat &currFrameImg, unsigned i
 		return false;
 	return true;
 }
+#pragma endregion
 
 void RemoveDuplicatePts(std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches)
 {
@@ -131,9 +134,8 @@ void OpticalFlow(cv::Mat &prevFrame, cv::Mat &currFrame, std::vector<cv::Point2f
 	*/
 }
 
-/*								*/
+#pragma region FindGoodMatches
 /*	Remove the false matching	*/
-/*								*/
 void FindGoodMatches(FeatureMap &featureMap, cv::Mat &currFrame, std::vector<cv::KeyPoint> &keypoints_frame, std::vector<cv::DMatch> &matches, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches)
 {
 	//This method is to delete the feature point which is multimatch
@@ -202,8 +204,6 @@ void FindGoodMatches(FeatureMap &featureMap, cv::Mat &currFrame, std::vector<cv:
 /*	Ouput : vector<Dmatch> (optimization)	 */
 void FindGoodMatches(std::vector<cv::DMatch> &matches, std::vector<cv::DMatch> &goodMatches)
 {
-	//Bug
-	//配對不正確
 	double max_dist = 0; double min_dist = 100;
 	for (std::vector<cv::DMatch>::size_type i = 0; i < matches.size(); i++)
 	{
@@ -256,7 +256,9 @@ void FindGoodMatches(std::vector<cv::DMatch> &matches, std::vector<cv::DMatch> &
 	}
 	goodMatches.swap(tmp);
 }
+#pragma endregion
 
+#pragma region FeatureMatch
 bool FeatureMatching(FeatureMap &featureMap, FrameMetaData &currData, cv::Mat &currFrameImg, cv::Mat &prevFrameImg, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
 {
 	//Matching current scene with the featureMap
@@ -315,22 +317,30 @@ bool FeatureMatching(double *cameraPara, std::vector<SFM_Feature> &SFM_Features,
 
 		int index = 0;
 		cv::Mat descriptors(r3dPtsCount, currData.descriptors.cols, CV_32F);
+		std::vector<cv::KeyPoint> pts;//For debug
+
 		for (std::vector<SFM_Feature>::iterator feature = SFM_Features.begin(); feature != SFM_Features.end(); ++feature)
 		{
 			if (feature->imgIdx == *queryIdx && feature->ptIdx != -1)
 			{
-				keyFrames[*queryIdx].descriptors.row(feature->descriptorIdx).copyTo(descriptors.row(index));
+				keyFrames[*queryIdx].descriptors.row(feature->descriptorIdx).copyTo(descriptors.row(index)); 
+				pts.push_back(keyFrames[*queryIdx].keypoints[feature->descriptorIdx]);
 				index++;
 			}
 		}
 
-		std::vector<cv::DMatch> matches, goodMatches;
 		//keyframe->query, current frame->train
+		std::vector<cv::DMatch> matches, goodMatches;
+		
 		FlannMatching(descriptors, currData.descriptors, matches);
+
 		FindGoodMatches(matches, goodMatches);
- 	//	DebugOpenCVMatchPoint(keyFrames[*queryIdx].image, keyFrames[*queryIdx].keypoints, currFrameImg, currData.keypoints,  goodMatches, "Test.jpg");
+
+		DebugOpenCVMatchPoint(keyFrames[*queryIdx].image, pts, currFrameImg, currData.keypoints, goodMatches, "Test.jpg");
+
 		if (goodMatches.size() == 0)
 			continue;
+
 		goodMatchesSet.push_back(goodMatches);
 	}
 
@@ -342,14 +352,22 @@ bool FeatureMatching(double *cameraPara, std::vector<SFM_Feature> &SFM_Features,
 	return true;
 }
 
+
 /*	Triangulation	*/
 void FeatureMatching(KeyFrame &query, KeyFrame &train, std::vector<cv::DMatch> &goodMatches)
 {
 	cout << "Start Triangulation matching.\n";
 
 	std::vector<cv::DMatch> matches;
+
 	FlannMatching(query.descriptors, train.descriptors, matches);
+
+	//DebugOpenCVMatchPoint(query.image, query.keypoints, train.image, train.keypoints, matches, "TestNotGood.jpg");
+
 	FindGoodMatches(matches, goodMatches);
 
+	//DebugOpenCVMatchPoint(query.image, query.keypoints, train.image, train.keypoints, goodMatches, "TestGood.jpg");
+	
 	cout << "Triangulation mathcing is end.\n";
 }
+#pragma endregion

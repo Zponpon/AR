@@ -124,9 +124,9 @@ void WorldToCamera(MyMatrix &R, Vector3d &t, cv::Point3d &r3dPt, Vector3d &r3dVe
 	pt = R * pt;
 
 	//Translation t
-	pt.m_lpdEntries[0] = r3dPt.x+t.x;
-	pt.m_lpdEntries[1] = r3dPt.y+t.y;
-	pt.m_lpdEntries[2] = r3dPt.z+t.z;
+	pt.m_lpdEntries[0] = r3dPt.x + t.x;
+	pt.m_lpdEntries[1] = r3dPt.y + t.y;
+	pt.m_lpdEntries[2] = r3dPt.z + t.z;
 
 	
 
@@ -168,20 +168,23 @@ void FindNeighboringKeyFrames(std::vector<KeyFrame> &keyframes, FrameMetaData &c
 	cv::Point2f originPt(400.0f, 300.0f);
 	int keyframesSize = (int)keyframes.size() - 1;
 	int index = 0;
+
 	for (std::vector<KeyFrame>::iterator KF = keyframes.begin(); index < keyframesSize; ++index)
 	{
 		cv::Point3d r3dPt;
 		if (Find3DCoordinates(KF->projMatrix, keyframes.back().projMatrix, originPt, originPt, r3dPt))
 		{
 			Vector3d r3dVec1, r3dVec2;
+
 			WorldToCamera(KF->R, KF->t, r3dPt, r3dVec1);
+
 			WorldToCamera(keyframes.back().R, keyframes.back().t, r3dPt, r3dVec2);
 
 			if (isNegihboringKeyFrame(KF->t, keyframes.back().t, r3dVec1, r3dVec2))
 				neighboringKeyFrameIdx.push_back(index);
 		}
-		//neighboringKeyFrameIdx.push_back(index);
 	}
+
 	//	Push the last keyframe
 	neighboringKeyFrameIdx.push_back(keyframesSize);
 }

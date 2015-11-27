@@ -87,6 +87,8 @@ void GetRotationAxisAndAngle(MyMatrix &R, double &angle, double axis[3])
 	}
 }
 
+#pragma region EstimateCameraPoseFromHomography
+
 /*******************************************************************************************************/
 /* Given camera intrinsic matrix, estimate camera pose from homography without considering             */   
 /* the orthonormality of r1 and r2                                                                     */
@@ -227,6 +229,10 @@ void EstimateCameraPoseFromHomography(MyMatrix &H, double fx, double fy, double 
 	EstimateCameraPoseFromHomography(H,K,R,t);
 }
 
+#pragma endregion
+
+#pragma region CostFunctionForCameraRefinement
+
 void CostFunctionForCameraRefinement(double *par, double *x, int m, int n, void *data)
 {
 	double t[3],K[3][3],P[3][4];
@@ -339,6 +345,9 @@ void DebugShowCostForCameraPoseRefinement(Point2d *pPoints1, Point2d *pPoints2, 
 	printf("Cost for camera pose refinement = %f\n", cost);
 }
 
+#pragma endregion
+
+#pragma region RefineCameraPose
 /*************************************************************************************************************/
 /* Refine camera pose using Levenberg-Marquardt minimization algorithm                                       */
 /* Reference: Lepetit and Fua, "Monocular model-based 3D tracking of rigid objects: A survey," Fundations    */
@@ -537,6 +546,8 @@ void RefineCameraPose(std::vector<cv::Point3d> &pPoints1, std::vector<cv::Point2
 	//printf("%f %f %f\n",t.x,t.y,t.z);
 }
 
+#pragma endregion
+
 /***********************************************************************************************************************/
 /* Update camera focal length using Homography                                                                         */
 /* Reference: G. Simon, A. W. Fitzgibbon, and A. Zisserman, "Markerless tracking using planar structures               */ 
@@ -586,6 +597,8 @@ bool UpdateCameraIntrinsicParameters(double *cameraPara, MyMatrix &H)
 	}
 }
 
+#pragma region EstimateCameraTransformation
+
 void EstimateCameraTransformation(double *cameraPara, double trans[3][4], FeatureMap &featureMap, FrameMetaData &currData, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
 {
 	//Using homography to estimate camera pose
@@ -630,7 +643,7 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], Featur
 	currData.R = R;
 	currData.t = t;
 	currData.timeStamp = clock() / CLOCKS_PER_SEC;
-	currData.state = 'H';
+	//currData.state = 'H';
 	currData.method = PoseEstimationMethod::ByHomography;
 
 	//	OpticalFlow
@@ -733,3 +746,5 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 
 	cout << "PoseEstimation by PnP Ransac is successful.\n";
 }
+
+#pragma endregion
