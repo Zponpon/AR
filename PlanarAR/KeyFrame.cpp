@@ -56,7 +56,7 @@ double calcDistance(Vector3d &t1, Vector3d &t2)
 	return sqrt((t1.x - t2.x)*(t1.x - t2.x) + (t1.y - t2.y)*(t1.y - t2.y) + (t1.z - t2.z)*(t1.z - t2.z));
 }
 
-double calcAngle(MyMatrix &K, MyMatrix &R1, MyMatrix &R2)
+double calcAngle(MyMatrix &R1, MyMatrix &R2)
 {
 	//相機方向
 	Vector3d R1Col2, R2Col2;
@@ -79,7 +79,7 @@ double calcAngle(MyMatrix &K, MyMatrix &R1, MyMatrix &R2)
 	return angle;
 }
 
-bool KeyFrameSelection(MyMatrix &K, KeyFrame &keyframesBack, FrameMetaData &currData, vector <Measurement> &measurementData)
+bool KeyFrameSelection(KeyFrame &keyframesBack, FrameMetaData &currData, vector <Measurement> &measurementData)
 {
 	double distance = calcDistance(keyframesBack.t, currData.t);
 	if (distance <= 250.0f || isnan(distance))
@@ -88,7 +88,7 @@ bool KeyFrameSelection(MyMatrix &K, KeyFrame &keyframesBack, FrameMetaData &curr
 		return false;
 	}
 
-	double angle = calcAngle(K, keyframesBack.R, currData.R);
+	double angle = calcAngle(keyframesBack.R, currData.R);
 	if (angle <= 30.0f || isnan(angle))
 	{
 		cout << "Angle : " << angle << endl;

@@ -110,7 +110,7 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 
 	if (currData.method == PoseEstimationMethod::Fail)	return false;
 
-	if (KeyFrameSelection(K, keyframes.back(), currData, measurementData))
+	if (KeyFrameSelection(keyframes.back(), currData, measurementData))
 	{
 		if (keyframes.size() < 4)
 		{

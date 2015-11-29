@@ -57,6 +57,6 @@ void CreateKeyFrame(MyMatrix &K, FrameMetaData &currFrame, cv::Mat &currFrameImg
 
 void FindNeighboringKeyFrames(std::vector<KeyFrame> &keyFrames, FrameMetaData &currFrame, std::vector<int> &goodKeyFrameIdx);
 
-bool KeyFrameSelection(MyMatrix &K, KeyFrame &back, FrameMetaData &currFrame, vector <Measurement> &measurementData);
+bool KeyFrameSelection(KeyFrame &back, FrameMetaData &currFrame, vector <Measurement> &measurementData);
 
 #endif
