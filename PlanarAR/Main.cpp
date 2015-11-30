@@ -244,7 +244,7 @@ void display(void)
 		glLoadMatrixd(gl_para);
 		glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
-		draw_axes(300.0);
+	//	draw_axes(300.0);
 
 		glColor3d(0.0, 0.0, 0.0);
 

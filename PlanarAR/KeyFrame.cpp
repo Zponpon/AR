@@ -48,7 +48,6 @@ void CreateKeyFrame(MyMatrix &K, FrameMetaData &currData, cv::Mat &currFrameImg,
 	fileNameStream << "KeyFrame" << keyframeIdx++ << ".jpg";
 	fileName = fileNameStream.str();
 	SavingKeyFrame(fileName, keyframe.image);
-	
 }
 
 double calcDistance(Vector3d &t1, Vector3d &t2)
@@ -89,7 +88,7 @@ bool KeyFrameSelection(KeyFrame &keyframesBack, FrameMetaData &currData, vector 
 	}
 
 	double angle = calcAngle(keyframesBack.R, currData.R);
-	if (angle <= 30.0f || isnan(angle))
+	if (angle <= 25.0f || isnan(angle))
 	{
 		cout << "Angle : " << angle << endl;
 		return false;

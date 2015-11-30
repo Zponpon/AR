@@ -2,7 +2,7 @@
 #include "debugfunc.h"
 
 videoInput VI;
-int dev =0;
+int dev = 0;
 int videoWidth, videoHeight;
 unsigned char * frame=NULL;
 

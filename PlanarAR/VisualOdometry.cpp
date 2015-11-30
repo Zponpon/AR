@@ -19,11 +19,6 @@ static vector<SFM_Feature> SFM_Features;
 vector<int> neighboringKeyFrameIdx;
 #pragma endregion
 
-void SetCameraMatrix(double *cameraPara)
-{
-	for (int i = 0; i < 9; ++i)
-		K.m_lpdEntries[i] = cameraPara[i];
-}
 
 void LoadFeatureMaps(int argc, char *argv[])
 {
@@ -35,7 +30,7 @@ void CreateFeatureMaps(FeatureMap &featureMap, unsigned int minHessian)
 {
 	if (FeatureDetection(featureMap, minHessian))
 	{
-		//Initialize the featureMap
+		//	Initialize the featureMap
 		for (std::vector<cv::KeyPoint>::size_type i = 0; i < featureMap.keypoints.size(); ++i)
 		{
 			featureMap.keypoints[i].pt.x -= featureMap.image.cols / 2;
@@ -47,26 +42,30 @@ void CreateFeatureMaps(FeatureMap &featureMap, unsigned int minHessian)
 
 void StopMultiThread()
 {
-	using std::chrono::system_clock;
-	std::this_thread::sleep_until(system_clock::now());
+	std::this_thread::sleep_until(std::chrono::system_clock::now());
 	WriteMeasurementDataFile(measurementData);
 }
 
 PoseEstimationMethod EstimationMethod()
 {
-	/*	Get the latest estimation method	*/
+	//	Get the latest estimation method
+	//	Homography, Ransac PnP or Fail
+
 	return frameMetaDatas.back().method;
 }
 
 bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat &prevFrameMat, cv::Mat &currFrameMat)
 {	
-	#pragma region Initialization
+	#pragma region Initialize
 	if (keyframes.size() == 0)
-		SetCameraMatrix(cameraPara);
+	{
+		for (int i = 0; i < 9; ++i)
+			K.m_lpdEntries[i] = cameraPara[i];
+	}
 	
 	cout << "KeyFrame count : " << keyframes.size() << endl;
 
-	FrameMetaData currData; //	Record the current frame data
+	FrameMetaData currData;
 	if (!FeatureDetection(currData, currFrameMat, 3000)) return false;
 
 	vector<cv::Point2f> currFrameGoodMatches, featureMapGoodMatches;
@@ -76,11 +75,14 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 
 	if (FeatureMatching(featureMap, currData, currFrameMat, prevFrameMat, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
 	{
+		//	Homography
 		EstimateCameraTransformation(cameraPara, trans, featureMap, currData, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers);
+
+		//	First keyframe
 		if (keyframes.size() == 0)
 		{
 			CreateKeyFrame(K, currData, currFrameMat, keyframes);
-			neighboringKeyFrameIdx.push_back(0);
+			//neighboringKeyFrameIdx.push_back(0);
 			frameMetaDatas.push_back(currData);
 			return true;
 		}
@@ -90,22 +92,23 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 		if (Optimization.joinable())
 		{
 			//	Multithread
-			//	wait for another thread completes
-			Optimization.join();
+			//	Wait for another thread completes
+			//Optimization.join();
 		}
 
 		if (FeatureMatching(cameraPara, SFM_Features, keyframes, currData, currFrameMat, neighboringKeyFrameIdx, goodMatchesSet))
 		{
+			//	Ransac PnP
 			EstimateCameraTransformation(cameraPara, trans, r3dPts, keyframes, currData, neighboringKeyFrameIdx, goodMatchesSet);
 		}
 		else
 		{
-			frameMetaDatas.push_back(currData);
 			currData.method = PoseEstimationMethod::Fail;
-			return false;
 		}
 	}
 
+
+	//	Save all frames
 	frameMetaDatas.push_back(currData);
 
 	if (currData.method == PoseEstimationMethod::Fail)	return false;
@@ -116,12 +119,13 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 		{
 			CreateKeyFrame(K, currData, currFrameMat, keyframes);
 			neighboringKeyFrameIdx.push_back((int)keyframes.size() - 1);
-			//Triangulation(cameraPara, SFM_Features, keyframes, r3dPts);
-			Optimization = std::thread(Triangulation, cameraPara, std::ref(SFM_Features), std::ref(keyframes), std::ref(r3dPts));
+			
+			//	Multithread
+			//Optimization = std::thread(Triangulation, cameraPara, std::ref(SFM_Features), std::ref(keyframes), std::ref(r3dPts));
+			
+			Triangulation(cameraPara, SFM_Features, keyframes, r3dPts);
 		}
 	}
-
-	//frameMetaDatas.push_back(currData);
 
 	return true;
 }

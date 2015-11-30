@@ -25,9 +25,9 @@
 /***************************************************************************************************************/
 bool Find3DCoordinates(const std::vector<MyMatrix> &Ps, const std::vector<Point3d> &pts, Point4d &r3DPt)
 {
-	int nViews;
+	//int nViews = 0;
 
-	nViews = Ps.size();
+	int nViews = (int)Ps.size();
 	MyMatrix *A, *U, *D, *V;
 	A = new MyMatrix(2 * nViews, 4);
 
@@ -71,9 +71,7 @@ bool Find3DCoordinates(const std::vector<MyMatrix> &Ps, const std::vector<Point3
 /***************************************************************************************************************/
 bool Find3DCoordinates(std::vector<MyMatrix> &Ps, const std::vector<cv::Point2f> &pts, cv::Point3d &r3DPt)
 {
-	int nViews;
-
-	nViews = Ps.size();
+	int nViews = (int)Ps.size();
 	MyMatrix *A, *U, *D, *V;
 	A = new MyMatrix(2 * nViews, 4);
 
@@ -124,9 +122,9 @@ bool Find3DCoordinates(std::vector<MyMatrix> &Ps, const std::vector<cv::Point2f>
 /***************************************************************************************************************/
 bool Find3DCoordinates(MyMatrix &K, std::vector<MyMatrix> &Rs, std::vector<MyMatrix> &ts, const std::vector<cv::Point2f> &pts, cv::Point3d &r3DPt)
 {
-	int nViews;
+	//int nViews = 0;
 
-	nViews = Rs.size();
+	int nViews = (int)Rs.size();
 	std::vector<MyMatrix> Ps;
 	
 	for(int i=0; i < nViews; i++)
@@ -627,7 +625,8 @@ void EstablishImageCorrespondences(vector<SFM_Feature> &SFM_Features, std::vecto
 		imgIdx2 = imgIdx1 + 1;
 	}*/
 	int lastIdx = (int) (keyFrames.size() - 1);
-	for (std::vector<KeyFrame>::size_type i = 0; i < keyFrames.size() - 1; ++i)
+
+	for (std::vector<KeyFrame>::size_type i = 0; i < lastIdx; ++i)
 	{
 		vector<cv::DMatch> goodMatches;
 		FeatureMatching(keyFrames[i], keyFrames.back(), goodMatches);
@@ -784,25 +783,15 @@ void BundleAdjustment(double *cameraPara, std::vector<KeyFrame> &keyframes, std:
 	CameraT camera;
 	for (std::vector<KeyFrame>::iterator KF = keyframes.begin(); KF != keyframes.end(); ++KF)
 	{
-		//Focal length
+		//	Focal length
 		camera.f = K.m_lpdEntries[0];
 
-		//Translation vector
-		/*
-		MyMatrix t(3, 1), invK(3, 3), invR(3, 3);
-		K.Inverse(&K);
-		KF->R.Inverse(&invR);
-		t.m_lpdEntries[0] = KF->t.x;
-		t.m_lpdEntries[1] = KF->t.y;
-		t.m_lpdEntries[2] = KF->t.z;
-		t = invK*t;
-		t = invR*t;
-		*/
+		//	Translation vector
 		camera.t[0] = KF->t.x;
 		camera.t[1] = KF->t.y;
 		camera.t[2] = KF->t.z;
 		
-		//Rotation matrix
+		//	Rotation matrix
 		camera.m[0][0] = KF->R.m_lpdEntries[0];
 		camera.m[0][1] = KF->R.m_lpdEntries[1];
 		camera.m[0][2] = KF->R.m_lpdEntries[2];
@@ -833,7 +822,7 @@ void BundleAdjustment(double *cameraPara, std::vector<KeyFrame> &keyframes, std:
 		{
 			if (feature->ptIdx == i)
 			{
-				//¡H!
+				//	Why
 				measurementPt.x = feature->pt.x-400;
 				measurementPt.y = feature->pt.y-300;
 				//measurementPt.y = -measurementPt.y;
@@ -859,7 +848,7 @@ void BundleAdjustment(double *cameraPara, std::vector<KeyFrame> &keyframes, std:
 		point.y = (double)points[i].xyz[1];
 		point.z = (double)points[i].xyz[2];
 
-		//Optimized points
+		//	Optimized points
 		r3dPts[i].x = point.x;
 		r3dPts[i].y = point.y;
 		r3dPts[i].z = point.z;
@@ -929,7 +918,7 @@ void Triangulation(double *cameraPara, vector<SFM_Feature> &SFM_Features, std::v
 	}
 
 	RemoveRedundantCorrespondences(SFM_Features, keyframes);
-	BundleAdjustment(cameraPara, keyframes, r3dPts, SFM_Features);
+	//BundleAdjustment(cameraPara, keyframes, r3dPts, SFM_Features);
 
 	cout << "Triangulation is end.\n";
 }
