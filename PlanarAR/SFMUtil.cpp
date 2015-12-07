@@ -816,7 +816,7 @@ void BundleAdjustment(double *cameraPara, std::vector<KeyFrame> &keyframes, std:
 	}
 
 	Point2D measurementPt;
-	for (int i = 0; i < r3dPts.size(); ++i)
+	for (int i = 0; i < (int)r3dPts.size(); ++i)
 	{
 		for (std::vector<SFM_Feature>::iterator feature = SFM_Features.begin(); feature != SFM_Features.end(); ++feature)
 		{
@@ -841,7 +841,7 @@ void BundleAdjustment(double *cameraPara, std::vector<KeyFrame> &keyframes, std:
 	
 	pba.RunBundleAdjustment();
 	
-	for (int i = 0; i < points.size(); ++i)
+	for (int i = 0; i < (int)points.size(); ++i)
 	{
 		cv::Point3d point;
 		point.x = (double)points[i].xyz[0];
@@ -854,7 +854,7 @@ void BundleAdjustment(double *cameraPara, std::vector<KeyFrame> &keyframes, std:
 		r3dPts[i].z = point.z;
 	}
 
-	for (int i = 0; i < cameras.size(); ++i)
+	for (int i = 0; i < (int)cameras.size(); ++i)
 	{
 		keyframes[i].R.m_lpdEntries[0] = cameras[i].m[0][0];
 		keyframes[i].R.m_lpdEntries[1] = cameras[i].m[0][1];
@@ -885,14 +885,19 @@ void Triangulation(double *cameraPara, vector<SFM_Feature> &SFM_Features, std::v
 	{
 		if (feature->isValid && feature->ptIdx == -1)
 		{
-			vector<cv::Point2f> pts(1, feature->pt);
+			cv::Point2f pt;
+			pt.x = feature->pt.x;
+			pt.y = feature->pt.y;
+			vector<cv::Point2f> pts(1, pt);
 			vector<MyMatrix> PMs(1, keyframes[(std::vector<KeyFrame>::size_type)feature->imgIdx].projMatrix);
 
 			for (std::vector<int>::size_type i = 0; i < feature->cores.size(); ++i)
 			{
 				if (SFM_Features[feature->cores[i]].isValid && SFM_Features[feature->cores[i]].ptIdx == -1)
 				{
-					pts.push_back(SFM_Features[feature->cores[i]].pt);
+					pt.x = SFM_Features[feature->cores[i]].pt.x;
+					pt.y = SFM_Features[feature->cores[i]].pt.y;
+					pts.push_back(pt);
 					PMs.push_back(keyframes[SFM_Features[feature->cores[i]].imgIdx].projMatrix);
 				}
 			}

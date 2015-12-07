@@ -28,13 +28,13 @@ void FlannMatching(cv::Mat &descriptors1, cv::Mat &descriptors2, std::vector<cv:
 bool FeatureDetection(FeatureMap &featureMap, unsigned int minHessian);
 
 /* Any scenes */
-bool FeatureDetection(FrameMetaData &currData, cv::Mat &currFrameImg, unsigned int minHessian);
+bool FeatureDetection(FrameMetaData &currData, cv::Mat &currFrameMat, unsigned int minHessian);
 
 /*	Homography	*/
-bool FeatureMatching(FeatureMap &featureMap, FrameMetaData &currFrame, cv::Mat &currFrameImg, cv::Mat &prevFrameImg, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapGoodMatches, std::vector<cv::Point2f> &prevFrameGoodMatches);
+bool FeatureMatching(FeatureMap &featureMap, FrameMetaData &currFrame, cv::Mat &currFrameMat, cv::Mat &prevFrameMat, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &frameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapGoodMatches, std::vector<cv::Point2f> &prevFrameGoodMatches);
 
 /*	PnPRansac	*/
-bool FeatureMatching(double *cameraPara, std::vector<SFM_Feature> &SFM_Features, std::vector<KeyFrame> &keyFrames, FrameMetaData &currData, cv::Mat &currFrameImg, std::vector<int> &neighboringKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet);
+bool FeatureMatching(std::vector<SFM_Feature> &SFM_Features, std::vector<KeyFrame> &keyFrames, FrameMetaData &currData, cv::Mat &currFrameMat, std::vector<int> &neighboringKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet);
 
 /*	Triangulation	*/
 void FeatureMatching(KeyFrame &query, KeyFrame &train, std::vector<cv::DMatch> &goodMatches);

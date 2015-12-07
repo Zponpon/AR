@@ -41,9 +41,9 @@ bool FeatureDetection(FeatureMap &featureMap, unsigned int minHessian)
 }
 
 
-bool FeatureDetection(FrameMetaData &currData, cv::Mat &currFrameImg, unsigned int minHessian )
+bool FeatureDetection(FrameMetaData &currData, cv::Mat &currFrameMat, unsigned int minHessian )
 {
-	SurfDetection(currFrameImg, currData.keypoints, currData.descriptors, minHessian);
+	SurfDetection(currFrameMat, currData.keypoints, currData.descriptors, minHessian);
 	if (currData.keypoints.size() == 0)
 		return false;
 	return true;
@@ -76,7 +76,7 @@ void RemoveDuplicatePts(std::vector<cv::Point2f> &featureMapGoodMatches, std::ve
 	}
 
 	//位置接近的特徵點暫時先刪除OpticalFlow算出來的
-	for (int i = 0; i < NotOverlayPointsFlag.size(); i++)
+	for (int i = 0; i < (int)NotOverlayPointsFlag.size(); i++)
 	{
 		if (NotOverlayPointsFlag[i])
 		{
@@ -215,13 +215,13 @@ void FindGoodMatches(std::vector<cv::DMatch> &matches, std::vector<cv::DMatch> &
 
 	//標記一對多的點為false-> goodMatches
 	std::vector<bool> GoodMatchesFlag((int)goodMatches.size(), true);
-	for (int j = 0; j < goodMatches.size(); j++)
+	for (int j = 0; j < (int)goodMatches.size(); j++)
 	{
 		std::vector<cv::DMatch>::size_type index = (std::vector<cv::DMatch>::size_type) j;	//紀錄distance較小的index
 		double distance = goodMatches[index].distance;
 		if (!GoodMatchesFlag[(std::vector<bool>::size_type)index])
 			continue;
-		for (int k = j + 1; k < goodMatches.size(); k++)
+		for (int k = j + 1; k < (int)goodMatches.size(); k++)
 		{
 			if (!GoodMatchesFlag[k])
 				continue;
@@ -250,21 +250,21 @@ void FindGoodMatches(std::vector<cv::DMatch> &matches, std::vector<cv::DMatch> &
 #pragma endregion
 
 #pragma region FeatureMatch
-bool FeatureMatching(FeatureMap &featureMap, FrameMetaData &currData, cv::Mat &currFrameImg, cv::Mat &prevFrameImg, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
+bool FeatureMatching(FeatureMap &featureMap, FrameMetaData &currData, cv::Mat &currFrameMat, cv::Mat &prevFrameMat, std::vector<cv::Point2f> &featureMapGoodMatches, std::vector<cv::Point2f> &currFrameGoodMatches, std::vector<cv::Point2f> &prevFeatureMapInliers, std::vector<cv::Point2f> &prevFrameInliers)
 {
 	//Matching current scene with the featureMap
 
 	std::vector<cv::DMatch> matches;
 	FlannMatching(featureMap.descriptors, currData.descriptors, matches);
-	FindGoodMatches(featureMap, currFrameImg, currData.keypoints, matches, featureMapGoodMatches, currFrameGoodMatches);
+	FindGoodMatches(featureMap, currFrameMat, currData.keypoints, matches, featureMapGoodMatches, currFrameGoodMatches);
 
 	//If GoodMatches size is not enough, use OpticalFlow to increase more matching points
 	if ((int)currFrameGoodMatches.size() < 25)
 	{
-		if ((int)prevFrameInliers.size() != 0 && (int)prevFeatureMapInliers.size() != 0 && prevFrameImg.data != NULL)
+		if ((int)prevFrameInliers.size() != 0 && (int)prevFeatureMapInliers.size() != 0 && prevFrameMat.data != NULL)
 		{
 			//Use optical flow to detect matching points
-			OpticalFlow(prevFrameImg, currFrameImg, prevFrameInliers, prevFeatureMapInliers, featureMapGoodMatches, currFrameGoodMatches);
+			OpticalFlow(prevFrameMat, currFrameMat, prevFrameInliers, prevFeatureMapInliers, featureMapGoodMatches, currFrameGoodMatches);
 			RemoveDuplicatePts(featureMapGoodMatches, currFrameGoodMatches);
 			if ((int)currFrameGoodMatches.size() < 25)
 				return false;
@@ -282,12 +282,8 @@ bool FeatureMatching(FeatureMap &featureMap, FrameMetaData &currData, cv::Mat &c
 
 
 /*	Ransac PnP	*/
-bool FeatureMatching(double *cameraPara, std::vector<SFM_Feature> &SFM_Features, std::vector<KeyFrame> &keyFrames, FrameMetaData &currData, cv::Mat &currFrameImg, std::vector<int> &neighboringKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
+bool FeatureMatching(std::vector<SFM_Feature> &SFM_Features, std::vector<KeyFrame> &keyFrames, FrameMetaData &currData, cv::Mat &currFrameMat, std::vector<int> &neighboringKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
 {
-	/* When we move the camera to the place where are without the featureMap                       */
-	/* We use the last keyframe to find the neighboring keyframes in the keyframe set			   */
-	/* Use these 3d points constructed by keyframes that we found to estimate our camera pose(PnP) */
-
 	if (keyFrames.size() < 2)
 		return false;
 

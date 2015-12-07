@@ -204,7 +204,7 @@ void WriteMeasurementDataFile(std::vector<Measurement> &measurementData)
 {
 	std::fstream file("Measurement.txt", std::ios::out | std::ios::app);
 	file << "distance	|	angle\n";
-	for (int i = 0; i < measurementData.size(); ++i)
+	for (int i = 0; i < (int)measurementData.size(); ++i)
 		file << i << ". " << measurementData[i].distance << "	|	" << measurementData[i].angle << "\n";
 }
 

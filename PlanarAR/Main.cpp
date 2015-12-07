@@ -25,8 +25,9 @@ unsigned char *prevFrame = NULL;
 //double cameraPara[9] = { 738.41709, 0.00000, 378.50000, 0.00000, 733.88828, 341.50000, 0.00000, 0.00000, 1.00000 };
 double cameraPara[9] = { 9.1317151001595698e+002, 0.00000, 3.9695336273339319e+002, 0.00000, 9.1335671139215276e+002, 2.9879860363446750e+002, 0.00000, 0.00000, 1.00000 };
 
+bool startInitial = false;
+
 FeatureMap featureMap;
-//std::vector<FeatureMap> featureMaps;
 cv::VideoWriter writer("GoProTestVideo.avi", CV_FOURCC('M', 'J', 'P', 'G'), 10.0, cv::Size(800, 600));
 
 clock_t t_start, t_end;
@@ -226,10 +227,19 @@ void display(void)
 	cv::Mat prevFrameMat;
 	cv::Mat currFrameMat = cv::Mat(winHeight, winWidth, CV_8UC3, frame);
 
+	if (startInitial)
+	{
+		InitializeKeyFrame(FrameCount, cameraPara, currFrameMat);
+		if (GetKeyFrameSize() == 4)
+			startInitial = false;
+	}
+
+	//if (GetKeyFrameSize() < 4) return;
+
 	if (prevFrame != NULL)
 		prevFrameMat = cv::Mat(winHeight, winWidth, CV_8UC3, prevFrame);
 
-	bool rtn = VO(cameraPara, trans, featureMap, prevFrameMat, currFrameMat);
+	bool rtn = VO(FrameCount, cameraPara, trans, featureMap, prevFrameMat, currFrameMat);
 
 	if (rtn)
 	{
@@ -271,7 +281,7 @@ void display(void)
 }
 
 void KeyboardFunc(unsigned char key, int x, int y)
-{
+{	
 	if(key==0x1b || key=='Q' || key=='q')
 	{
 		t_end=clock();
@@ -285,6 +295,12 @@ void KeyboardFunc(unsigned char key, int x, int y)
 	if(key=='S' || key=='s')
 	{
 		SetupVideo();
+		return;
+	}
+
+	if (key == 'I' || key == 'i')
+	{
+		startInitial = true;
 		return;
 	}
 }

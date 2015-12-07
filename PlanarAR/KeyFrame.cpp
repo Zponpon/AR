@@ -29,18 +29,21 @@ void CreateProjMatrix(MyMatrix &K, const MyMatrix &R, const Vector3d &t, MyMatri
 	projMatrix = K * projMatrix;
 }
 
-void CreateKeyFrame(MyMatrix &K, FrameMetaData &currData, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyframes)
+void CreateKeyFrame(MyMatrix &K, FrameMetaData &currData, cv::Mat &currFrameMat, std::vector<KeyFrame> &keyframes)
 {
 	KeyFrame keyframe;
 
-	currFrameImg.copyTo(keyframe.image);
+	currFrameMat.copyTo(keyframe.image);
 	currData.keypoints.swap(keyframe.keypoints);
 	currData.descriptors.copyTo(keyframe.descriptors);
-
-	keyframe.R.CreateMatrix(3, 3);
-	keyframe.R = currData.R;
-	keyframe.t = currData.t;
-	CreateProjMatrix(K, keyframe.R, keyframe.t, keyframe.projMatrix);
+	
+	if (keyframes.size() < 4)
+	{
+		keyframe.R.CreateMatrix(3, 3);
+		keyframe.R = currData.R;
+		keyframe.t = currData.t;
+		CreateProjMatrix(K, keyframe.R, keyframe.t, keyframe.projMatrix);
+	}
 
 	keyframes.push_back(keyframe);
 	std::stringstream fileNameStream;

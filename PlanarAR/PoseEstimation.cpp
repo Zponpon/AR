@@ -659,7 +659,7 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], Featur
 	cout << "PoseEstimation by homography is successful.\n";
 }
 
-void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::vector<cv::Point3d> &r3dPts, std::vector<KeyFrame> &keyframes, FrameMetaData &currData, std::vector<int> &neighboringKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
+void EstimateCameraTransformation(MyMatrix &cameraMatrix, double trans[3][4], std::vector<cv::Point3d> &r3dPts, std::vector<KeyFrame> &keyframes, FrameMetaData &currData, std::vector<int> &neighboringKeyFrameIdx, std::vector< std::vector<cv::DMatch> > &goodMatchesSet)
 {	
 	cout << "PoseEstimation by PnP Ransac start.\n";
 
@@ -695,7 +695,7 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 
 	cv::Mat K(3, 3, CV_64F), distCoeffs;
 	for (int i = 0; i < 9; ++i)
-		K.at<double>(i) = cameraPara[i];
+		K.at<double>(i) = cameraMatrix.m_lpdEntries[i];
 	cv::Mat rVec, t;
 	cv::Mat inliers;
 
@@ -731,7 +731,7 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 
 
 	method = PoseEstimationMethod::ByRansacPnP;
-	RefineCameraPose(inliers3D, inliers2D, inliers.rows, cameraPara[0], cameraPara[4], cameraPara[1], cameraPara[2], cameraPara[5], currData.R, currData.t);
+	RefineCameraPose(inliers3D, inliers2D, inliers.rows, K.at<double>(0), K.at<double>(4), K.at<double>(1), K.at<double>(2), K.at<double>(5), currData.R, currData.t);
 	
 	currData.timeStamp = clock() / CLOCKS_PER_SEC;
 	currData.method = PoseEstimationMethod::ByRansacPnP;
@@ -751,14 +751,6 @@ void EstimateCameraTransformation(double *cameraPara, double trans[3][4], std::v
 	trans[2][2] = currData.R.m_lpdEntries[8];
 	trans[2][3] = currData.t.z;
 	#pragma endregion
-	/*MyMatrix invR(3,3), I(3,3);
-	currData.R.Inverse(&invR);
-	I = invR * currData.R;
-	cout << "Rotation Matrix\n";
-	for (int i = 0; i < 9; ++i)
-	{
-		cout << I.m_lpdEntries[i] << endl;
-	}*/
 
 	
 

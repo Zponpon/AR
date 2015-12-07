@@ -8,12 +8,15 @@
 
 #pragma region Variables
 static vector<cv::Point2f> prevFrameInliers, prevFeatureMapInliers;
-static vector<FrameMetaData> frameMetaDatas;
-//static vector<FeatureMap> featureMaps;
-static vector<KeyFrame> keyframes;
+static unsigned int *lastCount = NULL;
 static std::thread Optimization;
+
+static vector<FrameMetaData> frameMetaDatas;
+static vector<KeyFrame> keyframes;
+
 static vector <Measurement> measurementData;
 static MyMatrix K(3, 3); // Camera Matrix
+
 static vector<cv::Point3d> r3dPts;	//world coordinate 3d points
 static vector<SFM_Feature> SFM_Features;
 vector<int> neighboringKeyFrameIdx;
@@ -40,6 +43,56 @@ void CreateFeatureMaps(FeatureMap &featureMap, unsigned int minHessian)
 	}
 }
 
+void InitializeBundlerApp(double f)
+{
+	static MyBundlerApp *bundlerApp = NULL;
+	bundlerApp = new MyBundlerApp();
+	
+	bundlerApp->Initialize((int)keyframes.size());
+
+	for (std::vector<KeyFrame>::size_type i = 0; i < keyframes.size(); ++i)
+	{
+		bundlerApp->SetImageData((int)i, keyframes[i].image.cols, keyframes[i].image.rows, f);
+	}
+
+	//EstablishImageCorrespondences(SFM_Features, keyframes);
+}
+
+void InitializeKeyFrame(unsigned int FrameCount, double *cameraPara, cv::Mat &currFrameMat)
+{
+	if (lastCount == NULL)
+	{
+		for (int i = 0; i < 9; ++i)
+			K.m_lpdEntries[i] = cameraPara[i];
+	}
+	
+	unsigned int interval = 0;
+	FrameMetaData currData;
+
+	if (lastCount != NULL)
+		interval = FrameCount - *lastCount;
+
+	if (interval > 20 || lastCount == NULL)
+	{
+		if (lastCount == NULL)
+			lastCount = new unsigned(FrameCount);
+		else
+		{
+			*lastCount = FrameCount;
+			if (!FeatureDetection(currData, currFrameMat, 3000))
+				return;
+
+			CreateKeyFrame(K, currData, currFrameMat, keyframes);
+		}
+	}
+
+	if (keyframes.size() == 4)
+	{
+		delete lastCount;
+		//BudlerApp
+	}
+}
+
 void StopMultiThread()
 {
 	std::this_thread::sleep_until(std::chrono::system_clock::now());
@@ -54,17 +107,19 @@ PoseEstimationMethod EstimationMethod()
 	return frameMetaDatas.back().method;
 }
 
-bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat &prevFrameMat, cv::Mat &currFrameMat)
+int GetKeyFrameSize()
+{
+	return (int)keyframes.size();
+}
+
+bool VO(unsigned int FrameCount, double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat &prevFrameMat, cv::Mat &currFrameMat)
 {	
 	#pragma region Initialize
-	if (keyframes.size() == 0)
-	{
-		for (int i = 0; i < 9; ++i)
-			K.m_lpdEntries[i] = cameraPara[i];
-	}
 	
 	cout << "KeyFrame count : " << keyframes.size() << endl;
 
+	if (keyframes.size() < 4) return false;
+	
 	FrameMetaData currData;
 	if (!FeatureDetection(currData, currFrameMat, 3000)) return false;
 
@@ -73,38 +128,21 @@ bool VO(double *cameraPara, double trans[3][4], FeatureMap &featureMap, cv::Mat 
 	vector< vector<cv::DMatch> > goodMatchesSet;
 	#pragma endregion
 
-	if (FeatureMatching(featureMap, currData, currFrameMat, prevFrameMat, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers))
+	if (Optimization.joinable())
 	{
-		//	Homography
-		EstimateCameraTransformation(cameraPara, trans, featureMap, currData, featureMapGoodMatches, currFrameGoodMatches, prevFeatureMapInliers, prevFrameInliers);
-
-		//	First keyframe
-		if (keyframes.size() == 0)
-		{
-			CreateKeyFrame(K, currData, currFrameMat, keyframes);
-			//neighboringKeyFrameIdx.push_back(0);
-			frameMetaDatas.push_back(currData);
-			return true;
-		}
+		//	Multithread
+		//	Wait for another thread completes
+		//Optimization.join();
 	}
-	else 
-	{
-		if (Optimization.joinable())
-		{
-			//	Multithread
-			//	Wait for another thread completes
-			//Optimization.join();
-		}
 
-		if (FeatureMatching(cameraPara, SFM_Features, keyframes, currData, currFrameMat, neighboringKeyFrameIdx, goodMatchesSet))
-		{
-			//	Ransac PnP
-			EstimateCameraTransformation(cameraPara, trans, r3dPts, keyframes, currData, neighboringKeyFrameIdx, goodMatchesSet);
-		}
-		else
-		{
-			currData.method = PoseEstimationMethod::Fail;
-		}
+	if (FeatureMatching(SFM_Features, keyframes, currData, currFrameMat, neighboringKeyFrameIdx, goodMatchesSet))
+	{
+		//	Ransac PnP
+		EstimateCameraTransformation(K, trans, r3dPts, keyframes, currData, neighboringKeyFrameIdx, goodMatchesSet);
+	}
+	else
+	{
+		currData.method = PoseEstimationMethod::Fail;
 	}
 
 

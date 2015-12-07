@@ -7,8 +7,9 @@
 #include "Matrix\MyMatrix.h"
 #include "opencv2/core/core.hpp"
 #include "opencv2/highgui/highgui.hpp"
+#include "MyBundler.h"
 
-class SFM_Feature
+/*class SFM_Feature
 {
 public:
 	bool isValid; // indicates whether this point is reliable or not
@@ -21,6 +22,7 @@ public:
 	{
 	}
 };
+*/
 
 bool Find3DCoordinates(const std::vector<MyMatrix> &Ps, const std::vector<Point3d> &pts, Point4d &r3DPt);
 bool Find3DCoordinates(std::vector<MyMatrix> &Ps, const std::vector<cv::Point2f> &pts, cv::Point3d &r3DPt);
@@ -31,6 +33,7 @@ bool OptimalTriangulation(const MyMatrix &P1, const MyMatrix &P2, const cv::Poin
 void CalculateCameraParameters(const MyMatrix &P, MyMatrix &K, MyMatrix &R, MyMatrix &t);
 double EstimateFocalLength(MyMatrix &F, double u0, double v0, double u1, double v1);
 
+void EstablishImageCorrespondences(vector<SFM_Feature> &SFM_Features, std::vector<KeyFrame> &keyFrames);
 void Triangulation(double *cameraPara, std::vector<SFM_Feature> &SFM_Features,std::vector<KeyFrame> &keyFrames, std::vector<cv::Point3d> &r3dPoints);
 //Local or Global Optimization function
 #endif

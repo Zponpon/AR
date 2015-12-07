@@ -53,7 +53,7 @@ struct Measurement
 	double distance;
 };
 
-void CreateKeyFrame(MyMatrix &K, FrameMetaData &currFrame, cv::Mat &currFrameImg, std::vector<KeyFrame> &keyFrames);
+void CreateKeyFrame(MyMatrix &K, FrameMetaData &currFrame, cv::Mat &currFrameMat, std::vector<KeyFrame> &keyFrames);
 
 void FindNeighboringKeyFrames(std::vector<KeyFrame> &keyFrames, FrameMetaData &currFrame, std::vector<int> &goodKeyFrameIdx);
 
